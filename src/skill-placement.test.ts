@@ -10,12 +10,12 @@ test("placement model preserves Scout and Cowork action ordering", () => {
   assert.deepEqual(
     defaultSkill.actions.map(({ placement, primary, label }) => [placement, primary, label]),
     [
-      ["export", false, "Export…"],
-      ["install", true, "Add to Scout"],
+      ["export", false, "エクスポート…"],
+      ["install", true, "Scout に追加"],
     ],
   );
-  assert.equal(defaultSkill.installDoneTitle, "Added to Scout");
-  assert.equal(defaultSkill.installDoneMessage, "is now in Scout — it loads automatically.");
+  assert.equal(defaultSkill.installDoneTitle, "Scout に追加しました");
+  assert.equal(defaultSkill.installDoneMessage, "は Scout に追加され、自動で読み込まれます。");
 
   const exportOnlyTarget = TARGETS.find(
     (target) =>
@@ -31,6 +31,6 @@ test("placement model preserves Scout and Cowork action ordering", () => {
   assert.equal(exportOnly.defaultPlacement, "export");
   assert.deepEqual(
     exportOnly.actions.map(({ placement, primary, label }) => [placement, primary, label]),
-    [["export", true, "Export skill"]],
+    [["export", true, "スキルをエクスポート"]],
   );
 });

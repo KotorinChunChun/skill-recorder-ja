@@ -1,16 +1,16 @@
 import { z } from "zod";
 
 export const MEMORY_KEY_NOTICE =
-  "Secure space is unavailable. The Key will be saved in-memory and will be re-asked next time.";
+  "OS の安全なストレージを使えないため、キーはアプリを終了するまでメモリに保持します。次回の起動時に入力し直してください。";
 export const AI_SETUP_REQUIRED =
   "Choose an AI connection before continuing: bring your own model or GitHub authentication.";
 
 export const PROVIDERS = [
   { id: "foundry", name: "Microsoft Foundry / Azure OpenAI (v1)", baseUrl: "", wireApi: "responses" },
-  { id: "azure", name: "Azure OpenAI (versioned endpoint)", baseUrl: "", wireApi: "completions" },
+  { id: "azure", name: "Azure OpenAI（バージョン指定）", baseUrl: "", wireApi: "completions" },
   { id: "openai", name: "OpenAI", baseUrl: "https://api.openai.com/v1", wireApi: "responses" },
   { id: "anthropic", name: "Anthropic", baseUrl: "https://api.anthropic.com", wireApi: "completions" },
-  { id: "custom", name: "Custom OpenAI-compatible", baseUrl: "", wireApi: "completions" },
+  { id: "custom", name: "カスタム（OpenAI 互換）", baseUrl: "", wireApi: "completions" },
 ] as const;
 
 export const ByomConfigSchema = z.object({
@@ -101,7 +101,7 @@ export function aiConnectionReady(status: AiConnectionStatus): boolean {
 export function aiDestination(status: AiConnectionStatus | null): string {
   if (status?.mode === "github") return "GitHub Copilot";
   if (status?.mode === "byom" && status.profile) {
-    return `${PROVIDERS.find((p) => p.id === status.profile?.provider)?.name ?? "your provider"} (${status.profile.baseUrl})`;
+    return `${PROVIDERS.find((p) => p.id === status.profile?.provider)?.name ?? "設定したプロバイダー"}（${status.profile.baseUrl}）`;
   }
-  return "the AI provider you choose";
+  return "選択した AI プロバイダー";
 }

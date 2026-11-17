@@ -6,11 +6,11 @@ export function formatMs(ms: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-/** Compact duration, e.g. "9s" or "1m 12s". */
+/** Compact duration for the session UI. */
 export function formatDur(ms: number): string {
   const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  return `${Math.floor(s / 60)}m ${s % 60}s`;
+  if (s < 60) return `${s}秒`;
+  return `${Math.floor(s / 60)}分${s % 60}秒`;
 }
 
 /** Compact binary file size, e.g. "824 KB" or "12.4 MB". */
@@ -42,10 +42,10 @@ export function shortLabel(intent: string): string {
   return (sp > 24 ? cut.slice(0, sp) : cut).replace(/[,;:]+$/, "") + "…";
 }
 
-/** Human timestamp for a saved session, e.g. "Jul 25, 1:05 AM". */
+/** Japanese timestamp for a saved session. */
 export function formatWhen(ms: number | null): string {
   if (ms == null) return "—";
-  return new Date(ms).toLocaleString(undefined, {
+  return new Date(ms).toLocaleString("ja-JP", {
     month: "short",
     day: "numeric",
     hour: "numeric",

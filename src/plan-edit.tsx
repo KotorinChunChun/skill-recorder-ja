@@ -138,7 +138,7 @@ export function EditableText({
       tabIndex={0}
       role="textbox"
       aria-label={ariaLabel ?? placeholder}
-      title="Click to edit"
+      title="クリックして編集"
       onClick={begin}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -173,7 +173,7 @@ function RowControls({
           <button
             type="button"
             className="tile-btn"
-            title="Move up"
+            title="上へ移動"
             disabled={index === 0}
             onClick={() => onMove(-1)}
           >
@@ -182,7 +182,7 @@ function RowControls({
           <button
             type="button"
             className="tile-btn"
-            title="Move down"
+            title="下へ移動"
             disabled={index === count - 1}
             onClick={() => onMove(1)}
           >
@@ -190,7 +190,7 @@ function RowControls({
           </button>
         </>
       )}
-      <button type="button" className="tile-btn tile-btn-del" title="Remove" onClick={onRemove}>
+      <button type="button" className="tile-btn tile-btn-del" title="削除" onClick={onRemove}>
         ×
       </button>
     </div>
@@ -245,7 +245,7 @@ function ValuePill({
   // Unknown token: no value to edit — flag it so the user (or agent) fixes it before export.
   if (!value) {
     return (
-      <span className="val-pill val-pill-unresolved" title="No value is defined for this token">
+      <span className="val-pill val-pill-unresolved" title="この項目の値は設定されていません">
         {`{{${token}}}`}
       </span>
     );
@@ -258,7 +258,7 @@ function ValuePill({
         ref={btnRef}
         type="button"
         className={`val-pill${value.value.trim() ? "" : " val-pill-empty"}${open ? " val-pill-active" : ""}`}
-        title={`${label}${value.value ? `: ${value.value}` : ""} — click to edit`}
+        title={`${label}${value.value ? `: ${value.value}` : ""} — クリックして編集`}
         onClick={(e) => {
           e.stopPropagation();
           onOpen();
@@ -359,7 +359,7 @@ function ValuePopover({
       ref={cardRef}
       className="val-pop"
       role="dialog"
-      aria-label={`Edit ${label}`}
+      aria-label={`編集 · ${label}`}
       style={{
         top: pos?.top ?? -9999,
         left: pos?.left ?? -9999,
@@ -378,7 +378,7 @@ function ValuePopover({
         rows={1}
         value={draft}
         spellCheck={false}
-        aria-label={`${label} value`}
+        aria-label={`${label}の値`}
         onChange={(e) => {
           setDraft(e.target.value);
           autoGrowTextarea(e.target);
@@ -393,7 +393,7 @@ function ValuePopover({
           }
         }}
       />
-      <div className="val-pop-hint">Esc to cancel · ⏎ to save</div>
+      <div className="val-pop-hint">Esc でキャンセル · Enter で保存</div>
     </div>,
     document.body,
   );
@@ -560,7 +560,7 @@ function TokenText({
       tabIndex={0}
       role="textbox"
       aria-label={ariaLabel}
-      title="Click to edit"
+      title="クリックして編集"
       onClick={(e) => {
         // A click on a pill edits its value (via popover), not the surrounding prose.
         const t = e.target as HTMLElement;
@@ -620,7 +620,7 @@ export function SkillStepTiles({
             <EditableText
               className="ed-strong"
               value={s.title}
-              placeholder="Step title"
+              placeholder="手順名"
               ariaLabel="Step title"
               onChange={(v) => patch(i, { title: v })}
             />
@@ -636,13 +636,13 @@ export function SkillStepTiles({
             onChangeText={(v) => patch(i, { text: v })}
             values={values}
             onChangeValues={onChangeValues}
-            placeholder="What happens in this step?"
+            placeholder="この手順で行う操作"
             ariaLabel="Step description"
           />
           {s.tools.length > 0 && (
             <div className="tile-foot">
               {s.tools.map((tool) => (
-                <span className="step-tool" title={`Runtime tool: ${tool}`} key={tool}>
+                <span className="step-tool" title={`実行時に使うツール · ${tool}`} key={tool}>
                   {planToolLabel(tool)}
                 </span>
               ))}
@@ -651,7 +651,7 @@ export function SkillStepTiles({
         </div>
       ))}
       <AddTile
-        label="Add step"
+        label="手順を追加"
         onAdd={() => onChange([...steps, { kind: "action", title: "", text: "", tools: [] }])}
       />
     </div>
@@ -683,7 +683,7 @@ export function AutomationStepTiles({
             <EditableText
               className="ed-strong"
               value={s.label}
-              placeholder="Step label"
+              placeholder="手順名"
               ariaLabel="Step label"
               onChange={(v) => patch(i, { label: v })}
             />
@@ -699,12 +699,12 @@ export function AutomationStepTiles({
             onChangeText={(v) => patch(i, { prompt: v })}
             values={values}
             onChangeValues={onChangeValues}
-            placeholder="The instruction the agent runs for this step"
+            placeholder="この手順でエージェントが実行する指示"
             ariaLabel="Step instruction"
           />
         </div>
       ))}
-      <AddTile label="Add step" onAdd={() => onChange([...steps, { label: "", prompt: "" }])} />
+      <AddTile label="手順を追加" onAdd={() => onChange([...steps, { label: "", prompt: "" }])} />
     </div>
   );
 }
@@ -730,7 +730,7 @@ export function AnalysisStepTiles({
             <EditableText
               className="ed-strong"
               value={s.title}
-              placeholder="What you did"
+              placeholder="行った操作"
               ariaLabel="Step title"
               onChange={(v) => patch(i, { title: v })}
             />
@@ -746,7 +746,7 @@ export function AnalysisStepTiles({
             multiline
             className="ed-detail"
             value={s.detail}
-            placeholder="A little more detail"
+            placeholder="操作の詳細"
             ariaLabel="Step detail"
             hideEmpty
             onChange={(v) => patch(i, { detail: v })}
@@ -754,7 +754,7 @@ export function AnalysisStepTiles({
         </div>
       ))}
       <AddTile
-        label="Add step"
+        label="手順を追加"
         onAdd={() =>
           onChange([
             ...steps,
@@ -768,7 +768,7 @@ export function AnalysisStepTiles({
 
 /* --- Automation schedule editor (read-first: sentence → controls) --------- */
 
-const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 const INTERVAL_CHOICES = [15, 30, 60, 120, 180, 240, 360, 720];
 
 function fmtTime(t: TimeOfDay): string {
@@ -801,7 +801,7 @@ export function ScheduleEditor({
       <div className="sched-read">
         <span className="sched-when">{describeSchedule(schedule)}</span>
         <button type="button" className="linky" onClick={() => setEditing(true)}>
-          Edit
+          編集
         </button>
       </div>
     );
@@ -830,9 +830,9 @@ export function ScheduleEditor({
           value={schedule.kind}
           onChange={(e) => changeKind(e.target.value as AutomationSchedule["kind"])}
         >
-          <option value="single">Once a day</option>
-          <option value="interval">Every…</option>
-          <option value="multi">A few times a day</option>
+          <option value="single">1日1回</option>
+          <option value="interval">一定間隔</option>
+          <option value="multi">1日に複数回</option>
         </select>
 
         {schedule.kind === "single" && (
@@ -855,11 +855,11 @@ export function ScheduleEditor({
             >
               {INTERVAL_CHOICES.map((m) => (
                 <option key={m} value={m}>
-                  {m < 60 ? `${m} min` : `${m / 60} h`}
+                  {m < 60 ? `${m} 分` : `${m / 60} 時間`}
                 </option>
               ))}
             </select>
-            <span className="sched-lbl">from</span>
+            <span className="sched-lbl">開始時刻</span>
             <input
               type="time"
               className="tile-input tile-time"
@@ -870,7 +870,7 @@ export function ScheduleEditor({
         )}
 
         <button type="button" className="linky sched-done" onClick={() => setEditing(false)}>
-          Done
+          完了
         </button>
       </div>
 
@@ -889,7 +889,7 @@ export function ScheduleEditor({
               <button
                 type="button"
                 className="tile-btn tile-btn-del"
-                title="Remove time"
+                title="時刻を削除"
                 disabled={schedule.times.length <= 1}
                 onClick={() => onChange({ ...schedule, times: removeAt(schedule.times, i), naturalLanguage: "" })}
               >
@@ -904,25 +904,25 @@ export function ScheduleEditor({
               onChange({ ...schedule, times: [...schedule.times, anchorOf(schedule)], naturalLanguage: "" })
             }
           >
-            + Add time
+            ＋ 時刻を追加
           </button>
         </div>
       )}
 
       <div className="sched-days">
-        <span className="sched-lbl">On</span>
+        <span className="sched-lbl">曜日</span>
         {DAY_LABELS.map((lbl, d) => (
           <button
             key={d}
             type="button"
             className={`day-chip${days.length === 0 || days.includes(d) ? " on" : ""}`}
-            title={days.length === 0 ? "Every day" : undefined}
+            title={days.length === 0 ? "毎日" : undefined}
             onClick={() => toggleDay(d)}
           >
             {lbl}
           </button>
         ))}
-        {days.length === 0 && <span className="sched-lbl sched-every">every day</span>}
+        {days.length === 0 && <span className="sched-lbl sched-every">毎日</span>}
       </div>
     </div>
   );

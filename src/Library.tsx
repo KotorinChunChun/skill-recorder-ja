@@ -30,7 +30,6 @@ import type { AutomationPlan, BuiltAutomation } from "../common/automation";
 import {
   DEFAULT_NARRATION_LANGUAGE,
   NARRATION_MODEL_DOWNLOAD_LABEL,
-  narrationLanguageLabel,
   NARRATION_LANGUAGES,
   isNarrationLanguage,
   type NarrationLanguage,
@@ -50,6 +49,8 @@ import { SensitiveReview } from "./SensitiveReview";
 import { AnalysisRecovery, completeSignIn, type AnalysisRun } from "./analysis-recovery";
 import { AiConnectionButton, useAiConnection } from "./AiProviderDialog";
 import { AI_SETUP_REQUIRED, aiDestination } from "../common/ai-provider";
+import { japaneseNarrationLanguage, japaneseTarget } from "./ui-language";
+import { japaneseMessage } from "./ui-messages";
 
 export function Library() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -91,7 +92,7 @@ export function Library() {
     setNotice(null);
     const res = await window.skillRecorder.deleteSession(id);
     if (!res.ok) {
-      setNotice(res.error ?? "Could not delete this recording.");
+      setNotice(res.error ?? "録画を削除できませんでした。");
       return;
     }
     setSessions((prev) => {
@@ -113,12 +114,12 @@ export function Library() {
       <aside className="lib-list">
         <AiConnectionButton />
         <div className="lib-list-head">
-          <span className="eyebrow">Sessions</span>
+          <span className="eyebrow">セッション一覧</span>
           <span className="pill">{sessions.length}</span>
         </div>
         {notice && (
-          <button className="sess-notice" onClick={() => setNotice(null)} title="Dismiss">
-            {notice}
+          <button className="sess-notice" onClick={() => setNotice(null)} title="閉じる">
+            {japaneseMessage(notice)}
           </button>
         )}
         <div className="lib-list-scroll">
@@ -141,8 +142,8 @@ export function Library() {
           />
         ) : (
           <div className="detail-empty">
-            <span className="eyebrow">No session selected</span>
-            <p>Pick a recording on the left to review its reconstructed intent and steps.</p>
+            <span className="eyebrow">セッションが選択されていません</span>
+            <p>左の一覧から録画を選ぶと、解析した目的と操作手順を確認できます。</p>
           </div>
         )}
       </main>
@@ -168,24 +169,24 @@ function SessionsList({
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   if (sessions.length === 0) {
-    return <p className="sessions-empty">{loaded ? "No recordings yet." : "Loading…"}</p>;
+    return <p className="sessions-empty">{loaded ? "録画はまだありません。" : "読み込み中…"}</p>;
   }
   return (
     <ul className="sess-list">
       {sessions.map((s) =>
         confirmId === s.id ? (
           <li key={s.id}>
-            <div className="sess-confirm" role="alertdialog" aria-label="Confirm delete">
+            <div className="sess-confirm" role="alertdialog" aria-label="録画の削除を確認">
               <div className="sess-confirm-text">
-                <span className="sess-confirm-title">Delete this recording?</span>
+                <span className="sess-confirm-title">この録画を削除しますか？</span>
                 <span className="sess-confirm-sub">
-                  This cannot be undone.
-                  {s.sizeBytes != null && ` Frees ${formatBytes(s.sizeBytes)} from this device.`}
+                  削除した録画は復元できません。
+                  {s.sizeBytes != null && ` このPCの空き容量が ${formatBytes(s.sizeBytes)} 増えます。`}
                 </span>
               </div>
               <div className="sess-confirm-actions">
                 <button className="linky" onClick={() => setConfirmId(null)}>
-                  Cancel
+                  キャンセル
                 </button>
                 <button
                   className="danger"
@@ -194,7 +195,7 @@ function SessionsList({
                     void onDelete(s.id);
                   }}
                 >
-                  Delete
+                  削除
                 </button>
               </div>
             </div>
@@ -209,45 +210,45 @@ function SessionsList({
                 <div className="sess-top">
                   <span className="sess-when">{formatWhen(s.startedAt)}</span>
                   <span className="sess-tags">
-                    {s.imported && <span className="tag recorded">imported</span>}
-                    {s.hasSkill && <span className="tag ok">skill</span>}
-                    {s.hasAutomation && <span className="tag auto">automation</span>}
+                    {s.imported && <span className="tag recorded">読み込み済み</span>}
+                    {s.hasSkill && <span className="tag ok">スキル</span>}
+                    {s.hasAutomation && <span className="tag auto">自動化</span>}
                     {!s.hasSkill && !s.hasAutomation && s.analysis && (
-                      <span className="tag an">analyzed</span>
+                      <span className="tag an">解析済み</span>
                     )}
                     {!s.imported && !s.hasSkill && !s.hasAutomation && !s.analysis && !s.processed && (
-                      <span className="tag warn">processing</span>
+                      <span className="tag warn">処理中</span>
                     )}
                     {!s.imported && !s.hasSkill && !s.hasAutomation && !s.analysis && s.processed && (
-                      <span className="tag recorded">recorded</span>
+                      <span className="tag recorded">録画済み</span>
                     )}
                   </span>
                 </div>
                 <div className="sess-intent">
                   {s.analysis
                     ? s.analysis.title?.trim() || shortLabel(s.analysis.intent)
-                    : s.imported?.name ?? "Not analyzed yet"}
+                    : s.imported?.name ?? "未解析"}
                 </div>
                 <div className="sess-sub">
                   {s.durationMs != null && <span>{formatDur(s.durationMs)}</span>}
                   {s.sizeBytes != null && (
                     <span
                       className="sess-size"
-                      title={`${s.sizeBytes.toLocaleString()} bytes used by this recording`}
+                      title={`${s.sizeBytes.toLocaleString()} バイトを使用`}
                     >
                       {formatBytes(s.sizeBytes)}
                     </span>
                   )}
-                  {s.analysis && <span>{s.analysis.stepCount} steps</span>}
-                  {s.hasVideo && <span>video</span>}
-                  {s.hasAudio && !s.hasNarration && <span>voice pending</span>}
-                  {s.hasNarration && <span>voice</span>}
+                  {s.analysis && <span>{s.analysis.stepCount} 手順</span>}
+                  {s.hasVideo && <span>動画</span>}
+                  {s.hasAudio && !s.hasNarration && <span>音声未処理</span>}
+                  {s.hasNarration && <span>音声</span>}
                 </div>
               </button>
               <button
                 className="sess-del"
-                aria-label={`Delete recording from ${formatWhen(s.startedAt)}`}
-                title="Delete recording"
+                aria-label={`録画を削除 · ${formatWhen(s.startedAt)}`}
+                title="録画を削除"
                 onClick={() => setConfirmId(s.id)}
               >
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -319,7 +320,7 @@ function DebugDownload({ sessionId }: { sessionId: string }) {
     if (res.ok) setPhase("saved");
     else if (res.canceled) setPhase("idle");
     else {
-      setErrorMsg(res.error ?? "Couldn't create the debug bundle.");
+      setErrorMsg(res.error ?? "デバッグ用データを作成できませんでした。");
       setPhase("error");
     }
   }, [sessionId]);
@@ -344,16 +345,16 @@ function DebugDownload({ sessionId }: { sessionId: string }) {
 
   const label =
     phase === "saving"
-      ? "Preparing debug bundle…"
+      ? "デバッグ用データを準備中…"
       : phase === "saved"
-        ? "Debug bundle saved"
-        : "Download details for debugging";
+        ? "デバッグ用データを保存しました"
+        : "デバッグ用データをダウンロード";
 
   return (
     <div className="debug-dl">
       {phase === "error" && (
-        <span className="debug-dl-note" title={errorMsg}>
-          Couldn't save
+        <span className="debug-dl-note" title={japaneseMessage(errorMsg)}>
+          保存できませんでした
         </span>
       )}
       <button
@@ -405,21 +406,19 @@ function DebugDownload({ sessionId }: { sessionId: string }) {
                   <circle cx="10" cy="12.4" r="1.1" fill="currentColor" />
                 </svg>
               </span>
-              <h2 id="debug-dl-title">Includes private information</h2>
+              <h2 id="debug-dl-title">機密情報が含まれる可能性があります</h2>
             </header>
 
             <p className="sheet-lead" id="debug-dl-desc">
-              This bundle is everything captured in this recording — screen video, screenshots,
-              visited URLs, clipboard contents, and any voice narration and transcript. Share it
-              only with people you trust.
+              このデータには、画面の動画や画像、開いたページの URL、コピーした内容、音声解説と文字起こしなど、録画で取得したすべての情報が含まれます。信頼できる相手にだけ共有してください。
             </p>
 
             <div className="sheet-actions">
               <button className="linky" onClick={() => setPhase("idle")}>
-                Cancel
+                キャンセル
               </button>
               <button className="record-cta" onClick={() => void download()}>
-                Download .zip
+                ZIP をダウンロード
               </button>
             </div>
           </div>
@@ -482,13 +481,13 @@ function AnalysisError({
     onSignInEnd?.(true);
     setWaiting(false);
     setFailure(onAuthenticated
-      ? "Sign-in canceled. Analysis will not retry automatically."
-      : "Sign-in canceled.");
+      ? "サインインをキャンセルしました。解析は自動で再試行されません。"
+      : "サインインをキャンセルしました。");
     try {
       await window.skillRecorder.cancelCopilotSignIn(id);
     } catch (err) {
       if (live.current && generation.current === canceledGeneration) {
-        setFailure(`Could not cancel sign-in: ${String(err)}`);
+        setFailure(`サインインをキャンセルできませんでした。${String(err)}`);
       }
     }
   };
@@ -526,39 +525,39 @@ function AnalysisError({
   };
 
   if (!isCopilotSignedOutError(error) || connection.status?.mode === "byom") return <div className="analysis-error">
-    {isCopilotSignedOutError(error) ? "The AI connection is now BYOM. Try your action again." : error}{" "}
+    {isCopilotSignedOutError(error) ? "AI 接続が「独自のモデル」に切り替わりました。もう一度操作してください。" : japaneseMessage(error)}{" "}
     {(error.includes(AI_SETUP_REQUIRED) || connection.status?.mode === "byom") &&
-      <button className="row-action" onClick={() => void connection.configure()}>AI connection</button>}
+      <button className="row-action" onClick={() => void connection.configure()}>AI 接続</button>}
   </div>;
 
   return (
     <div className="analysis-error">
-      <p>{error}</p>
+      <p>解析や生成を続けるには GitHub Copilot にサインインしてください。</p>
       <div className="signin-row">
         <button className="row-action" onClick={() => void openSignIn()} disabled={waiting}>
-          {waiting ? "Waiting for browser sign-in…" : "Sign in to Copilot"}
+          {waiting ? "ブラウザーでのサインインを待機中…" : "Copilot にサインイン"}
         </button>
         {waiting && (
           <>
-            <span role="status">Follow the app prompts and finish signing in in your browser.</span>
-            <button className="linky" onClick={() => void cancelSignIn()}>Cancel sign-in</button>
+            <span role="status">アプリの案内に従って、ブラウザーでサインインを完了してください。</span>
+            <button className="linky" onClick={() => void cancelSignIn()}>サインインをキャンセル</button>
           </>
         )}
         {signIn?.ok && (
-          <span>Signed in to Copilot. Try your action again when ready.</span>
+          <span>Copilot にサインインしました。準備ができたらもう一度操作してください。</span>
         )}
         {signIn && !signIn.ok && (
-          <span>{signIn.error ?? (
-            signIn.status === "canceled" ? "Sign-in canceled." :
-            signIn.status === "timed-out" ? "Sign-in timed out. Try again." :
-            "Couldn't sign in to Copilot."
+          <span>{japaneseMessage(signIn.error) || (
+            signIn.status === "canceled" ? "サインインをキャンセルしました。" :
+            signIn.status === "timed-out" ? "サインインがタイムアウトしました。もう一度お試しください。" :
+            "Copilot にサインインできませんでした。"
           )}</span>
         )}
-        {failure && <span role="alert">{failure}</span>}
+        {failure && <span role="alert">{japaneseMessage(failure)}</span>}
       </div>
       {signIn && !signIn.ok && signIn.command && (
         <>
-          <p className="signin-manual">Or run this command yourself:</p>
+          <p className="signin-manual">以下のコマンドでもサインインできます。</p>
           <code className="signin-command">{signIn.command}</code>
         </>
       )}
@@ -583,7 +582,7 @@ function AnalysisWorkspace({
   const importRunActive = useRef(false);
   const readyToAnalyze = summary.processed || Boolean(imported);
   const voicePending = summary.hasAudio && !summary.hasNarration;
-  const voiceLanguage = narrationLanguageLabel(
+  const voiceLanguage = japaneseNarrationLanguage(
     summary.narrationLanguage ?? DEFAULT_NARRATION_LANGUAGE,
   );
   const voiceBusy =
@@ -699,7 +698,7 @@ function AnalysisWorkspace({
   useEffect(() => {
     return window.skillRecorder.onAnalyzeProgress((p: AnalyzeProgress) => {
       if (p.sessionId !== sessionId) return;
-      setStatusLine(p.message);
+      setStatusLine(japaneseMessage(p.message));
       // The invocation, not a progress event, owns the busy state.
     });
   }, [sessionId]);
@@ -715,14 +714,14 @@ function AnalysisWorkspace({
       setError(null);
       setAnalyzing(true);
       setFailedRun(null);
-      setStatusLine("Starting…");
+      setStatusLine("開始中…");
       let signedOut = false;
       try {
         if (imported) {
           const saved = await window.skillRecorder.saveImportDetails(sessionId, {
             details: importDetails, language: importLanguage,
           });
-          if (!saved.ok) throw new Error(saved.error ?? "Could not save recording details.");
+          if (!saved.ok) throw new Error(saved.error ?? "録画の詳細を保存できませんでした。");
           if (!workspaceLive.current || !recovery.current.accepts(token)) return;
         }
         const res = await window.skillRecorder.analyze(sessionId);
@@ -734,7 +733,7 @@ function AnalysisWorkspace({
           // Preserve the existing narration/redaction pipeline and result handling.
           setReview(res.review ?? null);
         } else {
-          const message = res.error ?? "Analysis failed";
+          const message = res.error ?? "解析に失敗しました。";
           signedOut = isCopilotSignedOutError(message);
           setError(message);
           setFailedRun(token);
@@ -757,7 +756,7 @@ function AnalysisWorkspace({
             // A refresh failure must not be mistaken for an interrupted analysis.
             if (workspaceLive.current && latestRun.current === token) {
               setFailedRun(null);
-              setError(`Could not refresh recordings: ${String(err)}`);
+              setError(`録画一覧を更新できませんでした。${String(err)}`);
             }
           }
         }
@@ -776,7 +775,7 @@ function AnalysisWorkspace({
       } else recovery.current.finishRun(token, false);
     } catch {
       recovery.current.finishRun(token, false);
-      if (workspaceLive.current) setError("Could not prepare the AI connection. Try again.");
+      if (workspaceLive.current) setError("AI 接続を準備できませんでした。もう一度お試しください。");
     }
   }, [executeRun, ensureAiReady]);
 
@@ -808,13 +807,13 @@ function AnalysisWorkspace({
   const cancel = useCallback(async () => {
     const token = latestRun.current;
     recovery.current.cancelRun();
-    setStatusLine("Stopping…");
+    setStatusLine("停止中…");
     try {
       await window.skillRecorder.cancelAnalysis(sessionId);
     } catch (err) {
       if (workspaceLive.current && latestRun.current === token) {
         setFailedRun(null);
-        setError(`Could not cancel analysis: ${String(err)}`);
+        setError(`解析をキャンセルできませんでした。${String(err)}`);
       }
     }
   }, [sessionId]);
@@ -839,7 +838,7 @@ function AnalysisWorkspace({
       setEditing(false);
     } else {
       setFailedRun(null);
-      setError(res.error ?? "Could not save your changes");
+      setError(res.error ?? "変更を保存できませんでした。");
     }
     void onChanged();
   }, [sessionId, draftTitle, draftIntent, onChanged]);
@@ -891,7 +890,7 @@ function AnalysisWorkspace({
     <section className="ws">
       <div className="ws-head">
         <div className="ws-titles">
-          <span className="eyebrow">Analysis</span>
+          <span className="eyebrow">解析</span>
           <span className="ws-when">{formatWhen(summary.startedAt)}</span>
         </div>
         <DebugDownload sessionId={sessionId} />
@@ -900,21 +899,20 @@ function AnalysisWorkspace({
       <div className="ws-body">
         {voicePending && voiceError && !analyzing && !imported && (
           <p className="voice-analysis-note">
-            Couldn't transcribe your {voiceLanguage} voice, so this analysis doesn't include it.
-            Your audio is saved — analyzing again will retry.
+              {voiceLanguage}の音声を文字起こしできませんでした。今回の解析に音声は含まれません。音声は保存されているので、再解析すると文字起こしを再試行できます。
           </p>
         )}
 
         {voiceStale && !analyzing && !signInPending && (
           <div className="voice-card">
             <div className="voice-card-copy">
-              <strong>Voice transcript added after this analysis</strong>
-              <span>Re-analyze to include it. This replaces the current summary and any edits.</span>
+              <strong>解析後に文字起こしが追加されました</strong>
+              <span>文字起こしを含めるには再解析してください。現在の要約と編集内容は置き換わります。</span>
             </div>
             {confirmReanalysis ? (
               <div className="voice-card-actions">
                 <button className="linky" onClick={() => setConfirmReanalysis(false)}>
-                  Cancel
+                  キャンセル
                 </button>
                 <button
                   className="secondary"
@@ -923,78 +921,74 @@ function AnalysisWorkspace({
                     void run();
                   }}
                 >
-                  Replace analysis
+                  解析結果を置き換える
                 </button>
               </div>
             ) : (
               <button className="secondary" onClick={() => setConfirmReanalysis(true)}>
-                Re-analyze with voice
+                音声を含めて再解析
               </button>
             )}
           </div>
         )}
 
         {!readyToAnalyze && (
-          <p className="ws-note">Still processing this recording… try again in a moment.</p>
+          <p className="ws-note">この録画を処理中です。少し待ってからもう一度お試しください。</p>
         )}
 
         {readyToAnalyze && !analysis && !analyzing && (
           <div className="ws-empty">
-            <p className="ws-empty-lead">{imported ? "Turn this recording into a step-by-step activity list." : "See what you did in this recording, step by step."}</p>
+            <p className="ws-empty-lead">{imported ? "録画から操作手順を作成します。" : "録画から実際の操作手順を確認できます。"}</p>
             {imported && (
               <div className="import-details">
-                <p className="import-source">{imported.name} · {formatDur(imported.durationMs)} · {imported.hasAudio ? "Video and audio" : "Video without audio"}</p>
+                <p className="import-source">{imported.name} · {formatDur(imported.durationMs)} · {imported.hasAudio ? "動画と音声" : "音声なしの動画"}</p>
                 <label className="edit-field">
-                  <span className="edit-label">Additional details (optional)</span>
+                  <span className="edit-label">補足情報（任意）</span>
                   <textarea
                     className="edit-intent"
                     value={importDetails}
                     maxLength={IMPORT_LIMITS.details}
-                    placeholder="For example: The demo runs from 02:10 to 05:30. It shows how to approve an expense. The final confirmation happens in a separate app."
+                    placeholder="例：操作は 02:10 から 05:30 までです。経費を承認する手順で、最後の確認は別のアプリで行います。"
                     onChange={(event) => setImportDetails(event.target.value)}
                     disabled={signInPending}
                   />
                 </label>
-                <small>You can leave this empty. Describe the task, explain what is shown, or suggest demo timestamps. Timestamps guide the AI; they do not trim the file, and other parts may still be processed.</small>
+                <small>作業の目的や映っている内容、目安の時刻を書けます。時刻は AI の参考情報です。動画の切り出しは行われず、指定外の部分も処理される場合があります。</small>
                 {imported.hasAudio && (
                   <label className="edit-field">
-                    <span className="edit-label">Recording language</span>
+                    <span className="edit-label">録画の音声言語</span>
                     <select className="edit-title" value={importLanguage} disabled={signInPending} onChange={(event) => {
                       if (isNarrationLanguage(event.target.value)) setImportLanguage(event.target.value);
                     }}>
-                      {NARRATION_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}
+                      {NARRATION_LANGUAGES.map(({ code }) => <option key={code} value={code}>{japaneseNarrationLanguage(code)}</option>)}
                     </select>
                   </label>
                 )}
               </div>
             )}
             <button className="record-cta" onClick={() => void run()} disabled={signInPending}>
-              Analyze recording
+              録画を解析
             </button>
             <details className="analyze-disclosure">
-              <summary>What gets sent to your AI provider</summary>
+              <summary>AI プロバイダーに送信される内容</summary>
               <p>
-                Destination: {aiDestination(aiStatus)}.{" "}
+                送信先：{aiDestination(aiStatus)}。{" "}
                 {imported
-                  ? "When you choose Analyze, selected video frames, transcribed speech, and your additional details are sent to the selected AI provider. The imported media file stays on this computer. "
-                  : "When you choose Analyze, the event timeline (window and document titles, URLs, and clipboard previews), plus screen images, narration text, and other content you provide, are sent to the selected AI provider. "}
+                  ? "「解析」を選ぶと、動画から選んだ画像、文字起こし結果、補足情報が、選択した AI プロバイダーに送信されます。読み込んだ動画ファイルはこのPCに保存されます。"
+                  : "「解析」を選ぶと、操作履歴（ウィンドウやドキュメントのタイトル、URL、コピーしたテキストの冒頭）、画面画像、文字起こし、入力した補足情報などが、選択した AI プロバイダーに送信されます。"}
                 <span className="cloud-analysis-caution">
-                  Do not analyze a recording that may contain passwords, access tokens, API keys,
-                  credentials, secrets, or other sensitive or confidential information.
+                  パスワード、アクセストークン、API キー、認証情報などの機密情報を含む可能性がある録画は解析しないでください。
                 </span>{" "}
-                By default, before anything is sent, this computer hides sensitive details like
-                passwords, keys, emails, and card or ID numbers from the text and your screen
-                images. You can turn this off in What&apos;s recorded for more accurate analysis. It
-                can miss things, so it is a safety net, not a guarantee.
+                既定では送信前に、このPCでテキストと画面画像のパスワード、キー、メールアドレス、カード番号や識別番号などを隠します。精度を優先する場合は「記録と送信の内容」で保護をオフにできます。保護をオンにしていても機密情報を見逃す場合があります。
               </p>
             </details>
             {voicePending && (
               <p className="voice-analysis-note">
                 {imported
-                  ? `Audio is transcribed locally in ${narrationLanguageLabel(importLanguage)} before analysis. ${narrationStatus?.model === "ready" ? "" : `Choosing Analyze also downloads the ${NARRATION_MODEL_DOWNLOAD_LABEL} transcription model once.`} If transcription fails, analysis stops so you can retry.`
+                  ? `解析前に、このPCで${japaneseNarrationLanguage(importLanguage)}の音声を文字起こしします。${narrationStatus?.model === "ready" ? "" : `初回の解析時に文字起こしモデル（${NARRATION_MODEL_DOWNLOAD_LABEL}）をダウンロードします。`}文字起こしに失敗した場合は解析を停止します。再試行できます。`
                   : narrationStatus?.model === "ready"
-                  ? `Your ${voiceLanguage} voice is transcribed in the same language first, then analyzed.`
-                  : `Your ${voiceLanguage} voice is transcribed in the same language first, then analyzed. The first run downloads a ${NARRATION_MODEL_DOWNLOAD_LABEL} voice model once.`}
+                  ? `${voiceLanguage}の音声を文字起こししてから解析します。`
+                  : `${voiceLanguage}の音声を文字起こししてから解析します。初回は文字起こしモデル（${NARRATION_MODEL_DOWNLOAD_LABEL}）をダウンロードします。`}
               </p>
             )}
           </div>
@@ -1008,17 +1002,17 @@ function AnalysisWorkspace({
           <div className="status-line">
             <span className="spinner" />
             <span className="status-text">
-              {voiceBusy ? narrationWorkLabel(narrationStatus) : statusLine || "Working…"}
+              {voiceBusy ? narrationWorkLabel(narrationStatus) : statusLine || "処理中…"}
             </span>
             <button className="linky status-cancel" onClick={cancel}>
-              Cancel
+              キャンセル
             </button>
           </div>
         )}
 
         {analyzing && narrationStatus?.phase === "downloading" && (
           <p className="voice-analysis-note">
-            First analysis downloads the ~250 MB voice model once — later runs skip this.
+            初回の解析では、約252 MBの文字起こしモデルをダウンロードします。
           </p>
         )}
 
@@ -1035,10 +1029,10 @@ function AnalysisWorkspace({
           <div className="ws-read">
             <div className="summary">
               <div className="summary-head">
-                <span className="eyebrow">What you did</span>
+                <span className="eyebrow">行った操作</span>
                 {!editing && (
                   <button className="linky" onClick={startEdit}>
-                    Edit
+                    編集
                   </button>
                 )}
               </div>
@@ -1046,11 +1040,11 @@ function AnalysisWorkspace({
               {editing ? (
                 <div className="summary-edit">
                   <label className="edit-field">
-                    <span className="edit-label">Name</span>
+                    <span className="edit-label">名前</span>
                     <input
                       className="edit-title"
                       value={draftTitle}
-                      placeholder="Short name, e.g. Research habit articles"
+                      placeholder="短い名前（例：習慣づくりの記事を探す）"
                       autoFocus
                       onChange={(e) => setDraftTitle(e.target.value)}
                       onKeyDown={(e) => {
@@ -1060,14 +1054,14 @@ function AnalysisWorkspace({
                         } else if (e.key === "Escape") setEditing(false);
                       }}
                     />
-                    <span className="edit-hint">Appears in your sessions list</span>
+                    <span className="edit-hint">セッション一覧に表示されます</span>
                   </label>
                   <label className="edit-field">
-                    <span className="edit-label">Goal</span>
+                    <span className="edit-label">目的</span>
                     <textarea
                       className="edit-intent"
                       value={draftIntent}
-                      placeholder="One sentence: what were you trying to do?"
+                      placeholder="何をしようとしたか一文で入力"
                       onChange={(e) => setDraftIntent(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Escape") setEditing(false);
@@ -1076,10 +1070,10 @@ function AnalysisWorkspace({
                   </label>
                   <div className="edit-actions">
                     <button className="linky" onClick={() => setEditing(false)}>
-                      Cancel
+                      キャンセル
                     </button>
                     <button className="secondary" onClick={() => void saveEdit()}>
-                      Save
+                      保存
                     </button>
                   </div>
                 </div>
@@ -1095,8 +1089,8 @@ function AnalysisWorkspace({
 
             <div className="story-edit">
               <div className="summary-head">
-                <span className="eyebrow">Steps</span>
-                <span className="edit-hint">Click any step to edit · reorder, add or remove — saved automatically</span>
+                <span className="eyebrow">手順</span>
+                <span className="edit-hint">手順をクリックして編集、並べ替え、追加、削除できます。変更は自動保存されます。</span>
               </div>
               <AnalysisStepTiles steps={steps} onChange={onStepsChange} />
             </div>
@@ -1109,25 +1103,25 @@ function AnalysisWorkspace({
           <span className="foot-status">{launchFootStatus(summary)}</span>
           <div className="ws-foot-actions">
             {summary.hasSkill && (
-              <button className="secondary" onClick={() => setLaunch("skill")} title="Open the skill built from this recording">
-                Open skill →
+              <button className="secondary" onClick={() => setLaunch("skill")} title="この録画から作成したスキルを開く">
+                スキルを開く →
               </button>
             )}
             {summary.hasAutomation && (
               <button
                 className="secondary"
                 onClick={() => setLaunch("automation")}
-                title="Open the automation built from this recording"
+                title="この録画から作成した自動化を開く"
               >
-                Open automation →
+                自動化を開く →
               </button>
             )}
             <button
               className="record-cta"
               onClick={() => setLaunch("picker")}
-              title="Turn this recording into a skill or an automation"
+              title="この録画からスキルや自動化を作成する"
             >
-              {summary.hasSkill || summary.hasAutomation ? "Create another →" : "Create…"}
+              {summary.hasSkill || summary.hasAutomation ? "別のものを作成 →" : "作成…"}
             </button>
           </div>
         </div>
@@ -1137,15 +1131,15 @@ function AnalysisWorkspace({
 }
 
 function narrationWorkLabel(status: NarrationStatus | null): string {
-  if (!status) return "Working…";
-  if (status.phase === "transcribing") return "Transcribing voice…";
-  if (status.phase === "loading") return "Preparing voice model…";
+  if (!status) return "処理中…";
+  if (status.phase === "transcribing") return "音声を文字起こし中…";
+  if (status.phase === "loading") return "文字起こしモデルを準備中…";
   if (status.phase === "downloading") {
     return status.progress == null
-      ? "Downloading voice model…"
-      : `Downloading voice model… ${status.progress}%`;
+      ? "文字起こしモデルをダウンロード中…"
+      : `文字起こしモデルをダウンロード中…${status.progress}%`;
   }
-  return "Working…";
+  return "処理中…";
 }
 
 /* --- Final stage: target picker + builders -------------------------------- */
@@ -1154,9 +1148,9 @@ function narrationWorkLabel(status: NarrationStatus | null): string {
 type LaunchTarget = "none" | "picker" | "skill" | "automation";
 
 function launchFootStatus(summary: SessionSummary): string {
-  if (summary.hasSkill && summary.hasAutomation) return "Skill & automation created";
-  if (summary.hasSkill) return "Skill created";
-  if (summary.hasAutomation) return "Automation created";
+  if (summary.hasSkill && summary.hasAutomation) return "スキルと自動化を作成しました";
+  if (summary.hasSkill) return "スキルを作成しました";
+  if (summary.hasAutomation) return "自動化を作成しました";
   return "";
 }
 
@@ -1174,28 +1168,31 @@ function TargetPicker({
     <section className="ws">
       <div className="ws-head">
         <div className="ws-titles">
-          <span className="eyebrow">Create</span>
+          <span className="eyebrow">作成</span>
           <span className="ws-when">{formatWhen(startedAt)}</span>
         </div>
-        <button className="ghost" onClick={onClose} title="Back to the analysis">
-          Cancel
+        <button className="ghost" onClick={onClose} title="解析結果に戻る">
+          キャンセル
         </button>
       </div>
       <div className="ws-body">
         <div className="sb-arch">
-          <p className="sb-lead">What do you want to build from this recording?</p>
+          <p className="sb-lead">この録画から何を作成しますか？</p>
           <div className="arch-grid">
-            {TARGETS.map((t) => (
-              <button
-                key={`${t.kind}:${t.architecture}`}
-                className="arch-card"
-                disabled={!t.enabled}
-                onClick={() => t.enabled && onPick(t)}
-              >
-                <span className="arch-name">{t.label}</span>
-                <span className="arch-note">{t.enabled ? t.note : "Coming soon"}</span>
-              </button>
-            ))}
+            {TARGETS.map((t) => {
+              const copy = japaneseTarget(t);
+              return (
+                <button
+                  key={`${t.kind}:${t.architecture}`}
+                  className="arch-card"
+                  disabled={!t.enabled}
+                  onClick={() => t.enabled && onPick(t)}
+                >
+                  <span className="arch-name">{copy.label}</span>
+                  <span className="arch-note">{t.enabled ? copy.note : "対応予定"}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1250,7 +1247,7 @@ function SkillBuilderView({
     const version = flowVersion.current;
     try {
       const result = await window.skillRecorder.discardSkillPreview(sessionId, id);
-      if (!result.ok) throw new Error(result.error ?? "Could not discard the preview");
+      if (!result.ok) throw new Error(result.error ?? "プレビューを破棄できませんでした。");
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : String(cause);
       if (reportError && mounted.current && flowVersion.current === version) {
@@ -1283,7 +1280,7 @@ function SkillBuilderView({
       flowVersion.current++;
       if (guard.invalidate()) {
         void window.skillRecorder.cancelSkill(sessionId).then((result) => {
-          if (!result.ok) throw new Error("Could not cancel skill work");
+          if (!result.ok) throw new Error("スキルの作成をキャンセルできませんでした。");
         }).catch((cause: unknown) => {
           console.warn("Could not cancel skill work on departure", cause);
         });
@@ -1316,7 +1313,7 @@ function SkillBuilderView({
     }).catch((cause: unknown) => {
       if (live && flowVersion.current === version) dispatch({
         type: "settle", phase: "ready",
-        error: cause instanceof Error ? cause.message : "Could not open the skill",
+        error: cause instanceof Error ? cause.message : "スキルを開けませんでした。",
       });
     });
     return () => {
@@ -1327,7 +1324,7 @@ function SkillBuilderView({
   useEffect(() => {
     return window.skillRecorder.onSkillProgress((p: SkillBuildProgress) => {
       if (p.sessionId === sessionId && mounted.current && operations.current.busy && !stopping.current) {
-        dispatch({ type: "progress", message: p.message });
+        dispatch({ type: "progress", message: japaneseMessage(p.message) });
       }
     });
   }, [sessionId]);
@@ -1337,7 +1334,7 @@ function SkillBuilderView({
     if (!operation) return;
     invalidatePreview();
     flowVersion.current++;
-    dispatch({ type: "start", phase: "planning", message: "Planning the skill…" });
+    dispatch({ type: "start", phase: "planning", message: "スキルの手順を作成中…" });
     try {
       if (!await ensureAiReady() || !mounted.current || !operations.current.isCurrent(operation)) {
         if (mounted.current) dispatch({ type: "settle", phase: "ready" });
@@ -1349,11 +1346,11 @@ function SkillBuilderView({
         setPlan(res.plan);
         dispatch({ type: "settle", phase: "plan" });
       } else {
-        dispatch({ type: "settle", phase: "ready", error: res.error ?? "Planning failed" });
+        dispatch({ type: "settle", phase: "ready", error: res.error ?? "手順の作成に失敗しました。" });
       }
     } catch (cause) {
       if (mounted.current && operations.current.isCurrent(operation)) {
-        dispatch({ type: "settle", phase: "ready", error: cause instanceof Error ? cause.message : "Planning failed" });
+        dispatch({ type: "settle", phase: "ready", error: cause instanceof Error ? cause.message : "手順の作成に失敗しました。" });
       }
     } finally {
       operations.current.finish(operation);
@@ -1369,7 +1366,7 @@ function SkillBuilderView({
     const operation = operations.current.begin();
     if (!operation) return;
     flowVersion.current++;
-    dispatch({ type: "start", phase: "preparing", message: "Preparing SKILL.md preview…" });
+    dispatch({ type: "start", phase: "preparing", message: "SKILL.md のプレビューを準備中…" });
     try {
       if (!await ensureAiReady() || !mounted.current || !operations.current.isCurrent(operation)) {
         if (mounted.current) dispatch({ type: "settle", phase: "plan" });
@@ -1385,11 +1382,11 @@ function SkillBuilderView({
         previewRef.current = res.preview;
         dispatch({ type: "preview", preview: res.preview });
       } else {
-        dispatch({ type: "settle", phase: "plan", error: res.error ?? "Could not prepare the preview" });
+        dispatch({ type: "settle", phase: "plan", error: res.error ?? "プレビューを準備できませんでした。" });
       }
     } catch (cause) {
       if (mounted.current && operations.current.isCurrent(operation)) {
-        dispatch({ type: "settle", phase: "plan", error: cause instanceof Error ? cause.message : "Could not prepare the preview" });
+        dispatch({ type: "settle", phase: "plan", error: cause instanceof Error ? cause.message : "プレビューを準備できませんでした。" });
       }
     } finally {
       operations.current.finish(operation);
@@ -1402,7 +1399,7 @@ function SkillBuilderView({
       const operation = operations.current.begin();
       if (!operation) return;
       flowVersion.current++;
-      dispatch({ type: "start", phase: "creating", message: which === "export" ? "Exporting the skill…" : "Writing the skill…" });
+      dispatch({ type: "start", phase: "creating", message: which === "export" ? "スキルをエクスポート中…" : "スキルを保存中…" });
       try {
         if ((!previewRef.current && !await ensureAiReady()) || !mounted.current || !operations.current.isCurrent(operation)) {
           if (mounted.current) dispatch({ type: "settle", phase: "plan" });
@@ -1426,12 +1423,12 @@ function SkillBuilderView({
             type: "settle",
             phase: "plan",
             previewExpired: res.previewExpired,
-            error: res.canceled ? undefined : res.error ?? "Could not create the skill",
+            error: res.canceled ? undefined : res.error ?? "スキルを作成できませんでした。",
           });
         }
       } catch (cause) {
         if (mounted.current && operations.current.isCurrent(operation)) {
-          dispatch({ type: "settle", phase: "plan", error: cause instanceof Error ? cause.message : "Could not create the skill" });
+          dispatch({ type: "settle", phase: "plan", error: cause instanceof Error ? cause.message : "スキルを作成できませんでした。" });
         }
       } finally {
         operations.current.finish(operation);
@@ -1447,13 +1444,13 @@ function SkillBuilderView({
     stopping.current = true;
     flowVersion.current++;
     const { operation, originalSettled } = cancellation;
-    dispatch({ type: "start", phase: "stopping", message: "Stopping…" });
+    dispatch({ type: "start", phase: "stopping", message: "停止中…" });
     let error: string | undefined;
     try {
       const res = await window.skillRecorder.cancelSkill(sessionId);
-      if (!res.ok) throw new Error("Could not cancel skill work");
+      if (!res.ok) throw new Error("スキルの作成をキャンセルできませんでした。");
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : "Could not cancel skill work";
+      error = cause instanceof Error ? cause.message : "スキルの作成をキャンセルできませんでした。";
     }
     // Acknowledging cancellation only marks the backend operation. Its original
     // request may still own a model turn or an open native folder picker.
@@ -1480,16 +1477,16 @@ function SkillBuilderView({
     <section className="ws skill-builder" ref={workspaceRef} tabIndex={-1}>
       <div className="ws-head">
         <div className="ws-titles">
-          <span className="eyebrow">{phase === "done" ? "Skill" : "Create skill"}</span>
+          <span className="eyebrow">{phase === "done" ? "スキル" : "スキルを作成"}</span>
           <span className="ws-when">{formatWhen(startedAt)}</span>
         </div>
         <button
           className="ghost"
           onClick={onClose}
           disabled={busy}
-          title={phase === "done" ? "View this recording's analysis" : "Back to the analysis"}
+          title={phase === "done" ? "この録画の解析結果を表示" : "解析結果に戻る"}
         >
-          {phase === "done" ? "Analysis" : "Close"}
+          {phase === "done" ? "解析結果" : "閉じる"}
         </button>
       </div>
 
@@ -1499,15 +1496,15 @@ function SkillBuilderView({
         {phase === "loading" && (
           <div className="status-line">
             <span className="spinner" />
-            <span className="status-text">Opening the skill…</span>
+            <span className="status-text">スキルを開いています…</span>
           </div>
         )}
 
         {phase === "ready" && (
           <div className="sb-arch">
-            <p className="sb-lead">Build a {archLabel(architecture)} skill from this recording.</p>
+            <p className="sb-lead">この録画から {archLabel(architecture)} 用のスキルを作ります。</p>
             <button className="record-cta" onClick={() => void runPlan()}>
-              Plan the skill →
+              スキルの手順を作成 →
             </button>
           </div>
         )}
@@ -1515,13 +1512,13 @@ function SkillBuilderView({
         {busy && (
           <div className="status-line" role="status">
             <span className="spinner" />
-            <span className="status-text">{statusLine || "Working…"}</span>
+            <span className="status-text">{statusLine || "処理中…"}</span>
             <button className="linky status-cancel" onClick={cancelRun} disabled={phase === "stopping"}>
-              Cancel
+              キャンセル
             </button>
             {(phase === "preparing" || preview) && (
               <button className="ghost" ref={reviewButtonRef} onClick={() => dispatch({ type: "visibility", open: true })}>
-                Review SKILL.md
+                SKILL.md を確認
               </button>
             )}
           </div>
@@ -1534,7 +1531,7 @@ function SkillBuilderView({
                 as="div"
                 className="sb-title ed-title"
                 value={plan.title}
-                placeholder="Skill title"
+                placeholder="スキルのタイトル"
                 ariaLabel="Skill title"
                 onChange={(v) => updatePlan({ title: v })}
               />
@@ -1545,15 +1542,15 @@ function SkillBuilderView({
               multiline
               className="sb-desc ed-desc"
               value={plan.description}
-              placeholder="One-line description of what this skill does"
+              placeholder="スキルの概要を一行で入力"
               ariaLabel="Skill description"
               onChange={(v) => updatePlan({ description: v })}
             />
 
             <div className="sb-sec">
-              <span className="eyebrow">What the skill will do</span>
+              <span className="eyebrow">スキルの手順</span>
               <p className="sb-refine-hint">
-                Click any step to edit, or a highlighted value to change it. Reorder, add or remove as needed.
+                手順や強調表示された値をクリックして編集できます。手順の並べ替え、追加、削除もできます。
               </p>
               <SkillStepTiles
                 steps={plan.steps}
@@ -1571,13 +1568,13 @@ function SkillBuilderView({
               ✓
             </div>
             <h2 className="sb-title">
-              {placement === "install" ? placementModel.installDoneTitle : "Skill exported"}
+              {placement === "install" ? placementModel.installDoneTitle : "スキルをエクスポートしました"}
             </h2>
             <p>
               <code className="sb-slug">{builtName}</code>{" "}
               {placement === "install"
                 ? placementModel.installDoneMessage
-                : `is built for ${archLabel(architecture)}. Install it wherever ${archLabel(architecture)} loads skills.`}
+                : `は ${archLabel(architecture)} 用です。対応するスキルフォルダーに配置してください。`}
             </p>
             {exportedPath && <p className="sb-path">{exportedPath}</p>}
           </div>
@@ -1589,7 +1586,7 @@ function SkillBuilderView({
           <span className="foot-status" />
           <div className="ws-foot-actions">
             <button className="ghost" ref={reviewButtonRef} onClick={() => void review()}>
-              Review SKILL.md
+              SKILL.md を確認
             </button>
             {placementModel.actions.map((action) => (
               <button
@@ -1607,11 +1604,11 @@ function SkillBuilderView({
 
       {phase === "done" && (
         <div className="ws-foot">
-          <span className="foot-status">Skill created</span>
+          <span className="foot-status">スキルを作成しました</span>
           <div className="ws-foot-actions">
             {exportedPath && (
               <button className="record-cta" onClick={() => void window.skillRecorder.revealSkill(sessionId)}>
-                Reveal file
+                ファイルの場所を開く
               </button>
             )}
           </div>
@@ -1704,7 +1701,7 @@ function AutomationBuilderView({
 
   useEffect(() => {
     return window.skillRecorder.onAutomationProgress((p: AutomationBuildProgress) => {
-      if (p.sessionId === sessionId) setStatusLine(p.message);
+      if (p.sessionId === sessionId) setStatusLine(japaneseMessage(p.message));
     });
   }, [sessionId]);
 
@@ -1713,7 +1710,7 @@ function AutomationBuilderView({
     canceled.current = false;
     inFlight.current = true;
     setError(null);
-    setStatusLine("Planning the automation…");
+    setStatusLine("自動化の手順を作成中…");
     setPhase("planning");
     try {
       if (!await ensureAiReady() || canceled.current) {
@@ -1723,9 +1720,9 @@ function AutomationBuilderView({
       const res = await window.skillRecorder.buildAutomation({ sessionId, architecture });
       if (canceled.current) return;
       if (res.ok && res.plan) { setPlan(res.plan); setPhase("plan"); }
-      else { setError(res.error ?? "Planning failed"); setPhase("ready"); }
+      else { setError(res.error ?? "手順の作成に失敗しました。"); setPhase("ready"); }
     } catch {
-      if (!canceled.current) { setError("Could not plan the automation. Try again."); setPhase("ready"); }
+      if (!canceled.current) { setError("自動化の手順を作成できませんでした。もう一度お試しください。"); setPhase("ready"); }
     } finally { inFlight.current = false; }
   }, [sessionId, architecture, ensureAiReady]);
 
@@ -1734,7 +1731,7 @@ function AutomationBuilderView({
     canceled.current = false;
     inFlight.current = true;
     setError(null);
-    setStatusLine("Writing the automation…");
+    setStatusLine("自動化を保存中…");
     setPhase("creating");
     try {
       if (!await ensureAiReady() || canceled.current) {
@@ -1747,16 +1744,16 @@ function AutomationBuilderView({
         setBuiltName(res.automation.name);
         setExportedPath(res.path ?? res.automation.exportedPath ?? "");
         setPhase("done");
-      } else { setError(res.error ?? "Could not create the automation"); setPhase("plan"); }
+      } else { setError(res.error ?? "自動化を作成できませんでした。"); setPhase("plan"); }
     } catch {
-      if (!canceled.current) { setError("Could not create the automation. Try again."); setPhase("plan"); }
+      if (!canceled.current) { setError("自動化を作成できませんでした。もう一度お試しください。"); setPhase("plan"); }
     } finally { inFlight.current = false; }
   }, [sessionId, plan, ensureAiReady]);
 
   const cancelRun = useCallback(async () => {
     canceled.current = true;
     inFlight.current = false;
-    setStatusLine("Stopping…");
+    setStatusLine("停止中…");
     await window.skillRecorder.cancelAutomation(sessionId);
     setPhase(plan ? "plan" : "ready");
   }, [sessionId, plan]);
@@ -1767,16 +1764,16 @@ function AutomationBuilderView({
     <section className="ws">
       <div className="ws-head">
         <div className="ws-titles">
-          <span className="eyebrow">{phase === "done" ? "Automation" : "Create automation"}</span>
+          <span className="eyebrow">{phase === "done" ? "自動化" : "自動化を作成"}</span>
           <span className="ws-when">{formatWhen(startedAt)}</span>
         </div>
         <button
           className="ghost"
           onClick={onClose}
           disabled={busy}
-          title={phase === "done" ? "View this recording's analysis" : "Back to the analysis"}
+          title={phase === "done" ? "この録画の解析結果を表示" : "解析結果に戻る"}
         >
-          {phase === "done" ? "Analysis" : "Close"}
+          {phase === "done" ? "解析結果" : "閉じる"}
         </button>
       </div>
 
@@ -1786,15 +1783,15 @@ function AutomationBuilderView({
         {phase === "loading" && (
           <div className="status-line">
             <span className="spinner" />
-            <span className="status-text">Opening the automation…</span>
+            <span className="status-text">自動化を開いています…</span>
           </div>
         )}
 
         {phase === "ready" && (
           <div className="sb-arch">
-            <p className="sb-lead">Build a {archLabel(architecture)} automation from this recording.</p>
+            <p className="sb-lead">この録画から {archLabel(architecture)} 用の自動化を作ります。</p>
             <button className="record-cta" onClick={() => void runPlan()}>
-              Plan the automation →
+              自動化の手順を作成 →
             </button>
           </div>
         )}
@@ -1802,9 +1799,9 @@ function AutomationBuilderView({
         {busy && (
           <div className="status-line">
             <span className="spinner" />
-            <span className="status-text">{statusLine || "Working…"}</span>
+            <span className="status-text">{statusLine || "処理中…"}</span>
             <button className="linky status-cancel" onClick={cancelRun}>
-              Cancel
+              キャンセル
             </button>
           </div>
         )}
@@ -1816,7 +1813,7 @@ function AutomationBuilderView({
                 as="div"
                 className="sb-title ed-title"
                 value={plan.title}
-                placeholder="Automation title"
+                placeholder="自動化のタイトル"
                 ariaLabel="Automation title"
                 onChange={(v) => updatePlan({ title: v })}
               />
@@ -1827,29 +1824,29 @@ function AutomationBuilderView({
               multiline
               className="sb-desc ed-desc"
               value={plan.description}
-              placeholder="One-line description of what this automation does"
+              placeholder="自動化の概要を一行で入力"
               ariaLabel="Automation description"
               onChange={(v) => updatePlan({ description: v })}
             />
 
             <div className="sb-sec">
-              <span className="eyebrow">When it runs</span>
+              <span className="eyebrow">実行スケジュール</span>
               <p className="sb-refine-hint">
-                A recording has no schedule of its own — set when this automation should run.
+                この自動化を実行する日時や間隔を設定してください。
               </p>
               <ScheduleEditor
                 schedule={plan.trigger.schedule}
                 onChange={(schedule) => updatePlan({ trigger: { ...plan.trigger, schedule } })}
               />
               {plan.trigger.type === "condition" && plan.trigger.condition && (
-                <span className="trigger-cond">Only when: {plan.trigger.condition}</span>
+                <span className="trigger-cond">実行条件 {plan.trigger.condition}</span>
               )}
             </div>
 
             <div className="sb-sec">
-              <span className="eyebrow">What the automation will do</span>
+              <span className="eyebrow">自動化の手順</span>
               <p className="sb-refine-hint">
-                Click any step to edit, or a highlighted value to change it. Reorder, add or remove as needed.
+                手順や強調表示された値をクリックして編集できます。手順の並べ替え、追加、削除もできます。
               </p>
               <AutomationStepTiles
                 steps={plan.steps}
@@ -1866,15 +1863,13 @@ function AutomationBuilderView({
             <div className="sb-check" aria-hidden>
               ✓
             </div>
-            <h2 className="sb-title">Automation ready</h2>
+            <h2 className="sb-title">自動化の準備ができました</h2>
             <p>
-              <code className="sb-slug">{builtName}</code> is built for {archLabel(architecture)}.
+              <code className="sb-slug">{builtName}</code> は {archLabel(architecture)} 用です。
             </p>
             {exportedPath && <p className="sb-path">{exportedPath}</p>}
             <p className="sb-import-hint">
-              Import it into {automationInstallTargetLabel}: open{" "}
-              {automationInstallTargetLabel} → Automations → Import, and choose this bundle
-              folder.
+              {automationInstallTargetLabel} で「Automations」→「Import」を開き、このフォルダーを選んでください。
             </p>
           </div>
         )}
@@ -1887,9 +1882,9 @@ function AutomationBuilderView({
             <button
               className="record-cta"
               onClick={() => void create()}
-              title="Create and export the automation bundle"
+              title="自動化のファイル一式を作成してエクスポートする"
             >
-              Create &amp; export automation
+              自動化を作成してエクスポート
             </button>
           </div>
         </div>
@@ -1897,14 +1892,14 @@ function AutomationBuilderView({
 
       {phase === "done" && (
         <div className="ws-foot">
-          <span className="foot-status">Automation created</span>
+          <span className="foot-status">自動化を作成しました</span>
           <div className="ws-foot-actions">
             {exportedPath && (
               <button
                 className="record-cta"
                 onClick={() => void window.skillRecorder.revealAutomation(sessionId)}
               >
-                Reveal bundle
+                保存先を開く
               </button>
             )}
           </div>

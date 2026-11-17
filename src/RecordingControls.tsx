@@ -9,7 +9,8 @@ import {
   DEFAULT_NARRATION_LANGUAGE,
 } from "../common/narration";
 import { formatMs } from "./format";
-import { japaneseNarrationLanguage } from "./ui-language";
+import { japaneseDeviceLabel, japaneseNarrationLanguage } from "./ui-language";
+import { japaneseMessage } from "./ui-messages";
 
 export function RecordingControls() {
   const [status, setStatus] = useState<RecorderStatus | null>(null);
@@ -186,7 +187,7 @@ export function RecordingControls() {
       const error = result.error ?? "録画を破棄できませんでした。";
       setActionError(error);
       setFinishPending(null);
-      window.alert(error);
+      window.alert(japaneseMessage(error));
     }
   }, []);
 
@@ -212,10 +213,12 @@ export function RecordingControls() {
   const narrationLanguage = japaneseNarrationLanguage(
     status?.narrationLanguage ?? DEFAULT_NARRATION_LANGUAGE,
   );
-  const activeMicrophoneLabel =
-    status?.microphone.activeDevice?.label ??
-    microphoneSettings?.selectedDeviceLabel ??
-    "システムの既定";
+  const selectedMicrophoneLabel = japaneseDeviceLabel(
+    microphoneSettings?.selectedDeviceLabel ?? "システムの既定",
+  );
+  const activeMicrophoneLabel = japaneseDeviceLabel(
+    status?.microphone.activeDevice?.label ?? selectedMicrophoneLabel,
+  );
   const microphoneLabel =
     status?.microphone.state === "starting"
       ? "開始中"
@@ -337,7 +340,7 @@ export function RecordingControls() {
             <span>
               {microphoneOn
                 ? `使用中 · ${activeMicrophoneLabel}`
-                : `次に使用 · ${microphoneSettings?.selectedDeviceLabel ?? "システムの既定"}`}
+                : `次に使用 · ${selectedMicrophoneLabel}`}
             </span>
           </header>
           <div
@@ -358,7 +361,7 @@ export function RecordingControls() {
                   disabled={devicePending || finishPending !== null}
                   onClick={() => void selectMicrophone(device.id)}
                 >
-                  <span>{device.label}</span>
+                  <span>{japaneseDeviceLabel(device.label)}</span>
                   {selected && (
                     <span className="recording-microphone-selected">
                       選択中
@@ -386,7 +389,7 @@ export function RecordingControls() {
                   : undefined
               }
             >
-              {error}
+              {japaneseMessage(error)}
             </p>
           )}
         </section>
@@ -417,14 +420,14 @@ export function RecordingControls() {
                 microphoneOn
                   ? `${activeMicrophoneLabel}をミュート。文字起こしの言語は${narrationLanguage}です。`
                   : microphoneError
-                    ? `マイクを再試行。${status?.microphone.error ?? ""}`
-                    : `${microphoneSettings?.selectedDeviceLabel ?? "システムの既定"}のミュートを解除。文字起こしの言語は${narrationLanguage}です。`
+                    ? `マイクを再試行。${japaneseMessage(status?.microphone.error)}`
+                    : `${selectedMicrophoneLabel}のミュートを解除。文字起こしの言語は${narrationLanguage}です。`
               }
               aria-pressed={microphoneOn}
               title={
                 microphoneOn
                   ? `マイクをオフ · ${activeMicrophoneLabel} · ${narrationLanguage}で文字起こし`
-                  : `マイクをオン · ${microphoneSettings?.selectedDeviceLabel ?? "システムの既定"} · ${narrationLanguage}で文字起こし`
+                  : `マイクをオン · ${selectedMicrophoneLabel} · ${narrationLanguage}で文字起こし`
               }
               onClick={() => void toggleMicrophone()}
             >
@@ -456,7 +459,7 @@ export function RecordingControls() {
             aria-label={
               terminalStatus?.state === "closed"
                 ? "記録対象のターミナルを開く"
-                : `記録対象のターミナルに切り替える。${terminalStatus?.state ?? ""}`
+                : "記録対象のターミナルに切り替える"
             }
             title="この録画に記録するターミナルを開く"
             onClick={() => void openTerminal()}
@@ -492,7 +495,7 @@ export function RecordingControls() {
       </div>
 
       <span className="recording-controls-live" aria-live="polite">
-        {error ?? ""}
+        {japaneseMessage(error)}
       </span>
     </div>
   );

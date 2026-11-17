@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 
 import type { SkillPlacement, SkillPreview } from "../common/ipc";
 import type { SkillPlacementModel } from "./skill-placement";
+import { japaneseMessage } from "./ui-messages";
 
 export function SkillReviewModal({
   preview,
@@ -97,28 +98,27 @@ export function SkillReviewModal({
         tabIndex={-1}
       >
         <div className="sheet-head">
-          <h2 id={titleId}>Review SKILL.md</h2>
-          <button className="ghost" onClick={onClose}>Close</button>
+          <h2 id={titleId}>SKILL.md を確認</h2>
+          <button className="ghost" onClick={onClose}>閉じる</button>
         </div>
         <p className="sheet-lead" id={descriptionId}>
-          Read-only file preview, including frontmatter. Nothing is installed or exported until you choose an action below.
-          Closing this window keeps the preview; editing the plan discards it.
+          先頭の設定情報を含む、読み取り専用のプレビューです。下の操作を選ぶと、スキルを追加またはエクスポートできます。この画面を閉じてもプレビューは保持され、手順を編集すると破棄されます。
         </p>
-        {error && <p className="sheet-caution" role="alert">{error}</p>}
+        {error && <p className="sheet-caution" role="alert">{japaneseMessage(error)}</p>}
         {busy && (
           <div className="status-line" role="status">
             <span className="spinner" aria-hidden="true" />
-            <span className="status-text">{statusLine || "Working…"}</span>
-            <button className="linky status-cancel" onClick={onCancel} disabled={stopping}>Cancel</button>
+            <span className="status-text">{statusLine || "処理中…"}</span>
+            <button className="linky status-cancel" onClick={onCancel} disabled={stopping}>キャンセル</button>
           </div>
         )}
         {preview && (
-          <pre className="skill-review-source" tabIndex={0} aria-label="SKILL.md source">
+          <pre className="skill-review-source" tabIndex={0} aria-label="SKILL.md の内容">
             <code>{preview.markdown}</code>
           </pre>
         )}
         {!preview && !busy && (
-          <button className="ghost" onClick={onPrepare}>Prepare preview</button>
+          <button className="ghost" onClick={onPrepare}>プレビューを準備</button>
         )}
         <div className="sheet-actions skill-review-actions">
           {placementModel.actions.map((action) => (

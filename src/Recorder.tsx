@@ -17,7 +17,8 @@ import {
 } from "../common/narration";
 import { formatMs } from "./format";
 import { IMPORT_LIMITS } from "../common/import";
-import { japaneseNarrationLanguage } from "./ui-language";
+import { japaneseDeviceLabel, japaneseNarrationLanguage } from "./ui-language";
+import { japaneseMessage } from "./ui-messages";
 import { RecordingPrivacyWarning } from "./RecordingPrivacyWarning";
 import { WhatsRecorded } from "./WhatsRecorded";
 
@@ -136,7 +137,7 @@ export function Recorder() {
   const narrationLanguageName = japaneseNarrationLanguage(narrationLanguage);
   const advancedOn = sensitive?.enabled ?? true;
   const selectedScreenLabel =
-    screenSettings?.selectedSourceLabel ?? "画面を読み込み中…";
+    japaneseDeviceLabel(japaneseMessage(screenSettings?.selectedSourceLabel) || "画面を読み込み中…");
 
   useEffect(() => {
     if (recording) {
@@ -213,7 +214,7 @@ export function Recorder() {
   const toggle = useCallback(async () => {
     if (recording) {
       const res = await window.skillRecorder.stop();
-      if (!res.ok) window.alert(res.error ?? "操作を完了できませんでした。");
+      if (!res.ok) window.alert(japaneseMessage(res.error) || "操作を完了できませんでした。");
       applyRecorderStatus(await window.skillRecorder.status());
       return;
     }
@@ -223,7 +224,7 @@ export function Recorder() {
       setShowRecordingWarning(true);
       return;
     }
-    if (!res.ok) window.alert(res.error ?? "操作を完了できませんでした。");
+    if (!res.ok) window.alert(japaneseMessage(res.error) || "操作を完了できませんでした。");
     applyRecorderStatus(await window.skillRecorder.status());
   }, [applyRecorderStatus, recording]);
 
@@ -232,7 +233,7 @@ export function Recorder() {
     const res = await window.skillRecorder.confirmStart();
     if (!res.ok) {
       setWarningStarting(false);
-      window.alert(res.error ?? "録画を開始できませんでした。");
+      window.alert(japaneseMessage(res.error) || "録画を開始できませんでした。");
       return;
     }
     setShowRecordingWarning(false);
@@ -265,7 +266,7 @@ export function Recorder() {
       }
       setSelectedNarrationLanguage(value);
       const result = await window.skillRecorder.setNarrationLanguage(value);
-      if (!result.ok) window.alert(result.error ?? "文字起こしの言語を変更できませんでした。");
+      if (!result.ok) window.alert(japaneseMessage(result.error) || "文字起こしの言語を変更できませんでした。");
       applyRecorderStatus(await window.skillRecorder.status());
     },
     [applyRecorderStatus],
@@ -341,7 +342,7 @@ export function Recorder() {
 
   const downloadNarrationModel = useCallback(async () => {
     const res = await window.skillRecorder.downloadNarrationModel();
-    if (!res.ok) window.alert(res.error ?? "文字起こしモデルをダウンロードできませんでした。");
+    if (!res.ok) window.alert(japaneseMessage(res.error) || "文字起こしモデルをダウンロードできませんでした。");
   }, []);
 
   const toggleAdvanced = useCallback(async () => {
@@ -352,14 +353,14 @@ export function Recorder() {
     const res = await window.skillRecorder.setAdvancedProtection(next);
     if (!res.ok) {
       void window.skillRecorder.sensitiveModelStatus().then(setSensitive);
-      window.alert(res.error ?? "高度な保護の設定を更新できませんでした。");
+      window.alert(japaneseMessage(res.error) || "高度な保護の設定を更新できませんでした。");
     }
     setAdvancedPending(false);
   }, [sensitive]);
 
   const downloadSensitiveModels = useCallback(async () => {
     const res = await window.skillRecorder.downloadSensitiveModels();
-    if (!res.ok) window.alert(res.error ?? "保護モデルをダウンロードできませんでした。");
+    if (!res.ok) window.alert(japaneseMessage(res.error) || "保護モデルをダウンロードできませんでした。");
   }, []);
 
   return (
@@ -392,7 +393,7 @@ export function Recorder() {
             <button className="linky" disabled={importCanceling} onClick={() => void cancelImport()}>キャンセル</button>
           </div>
         )}
-        {importError && <p className="import-error" role="alert">{importError}</p>}
+        {importError && <p className="import-error" role="alert">{japaneseMessage(importError)}</p>}
         <div className={`timecode ${recording ? "live" : ""}`}>
           {recording ? formatMs(elapsed) : "00:00"}
         </div>
@@ -548,7 +549,7 @@ export function Recorder() {
                 {microphoneSettings ? (
                   microphoneSettings.devices.map((device) => (
                     <option key={device.id} value={device.id}>
-                      {device.label}
+                      {japaneseDeviceLabel(device.label)}
                     </option>
                   ))
                 ) : (
@@ -576,7 +577,7 @@ export function Recorder() {
                 {screenSettings?.screens.length ? (
                   screenSettings.screens.map((source) => (
                     <option key={source.id} value={source.id}>
-                      {source.label}
+                      {japaneseDeviceLabel(source.label)}
                     </option>
                   ))
                 ) : (
@@ -604,9 +605,9 @@ export function Recorder() {
                     : undefined
                 }
               >
-                {microphoneActionError ??
+                {japaneseMessage(microphoneActionError ??
                   microphoneSettings?.error ??
-                  microphoneSettings?.fallback}
+                  microphoneSettings?.fallback)}
               </p>
             )}
             {(screenActionError ||
@@ -624,9 +625,9 @@ export function Recorder() {
                     : undefined
                 }
               >
-                {screenActionError ??
+                {japaneseMessage(screenActionError ??
                   screenSettings?.error ??
-                  screenSettings?.fallback}
+                  screenSettings?.fallback)}
               </p>
             )}
             </div>

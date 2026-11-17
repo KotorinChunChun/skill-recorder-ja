@@ -4,20 +4,18 @@ import type { SensitiveFinding, SensitiveReport } from "../common/ipc";
 import { sourceLabel } from "../common/sensitive";
 
 const SEVERITY_LABEL: Record<SensitiveFinding["severity"], string> = {
-  high: "High risk",
-  medium: "Possibly sensitive",
-  low: "Low confidence",
+  high: "高リスク",
+  medium: "機密情報の可能性あり",
+  low: "検出の確度が低い",
 };
 
 function headline(report: SensitiveReport): string {
   const t = report.totalFindings;
   const regions = report.images?.regionsBlurred ?? 0;
-  const details = `${t} sensitive ${t === 1 ? "detail" : "details"}`;
-  const areas = `${regions} on-screen ${regions === 1 ? "area" : "areas"}`;
-  if (t > 0 && regions > 0) return `Hid ${details} and blurred ${areas} before sending`;
-  if (t > 0) return `Hid ${details} before sending`;
-  if (regions > 0) return `Blurred ${areas} in screen images before sending`;
-  return "Checked for sensitive details before sending";
+  if (t > 0 && regions > 0) return `送信前に機密情報 ${t} 件を隠し、画像の ${regions} 箇所をぼかしました`;
+  if (t > 0) return `送信前に機密情報 ${t} 件を隠しました`;
+  if (regions > 0) return `送信前に画像の ${regions} 箇所をぼかしました`;
+  return "送信前に機密情報が含まれていないか確認しました";
 }
 
 /**
@@ -71,11 +69,11 @@ export function SensitiveReview({
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
-            {open ? "Hide" : "Review"}
+            {open ? "閉じる" : "詳細"}
           </button>
         )}
-        <button className="sensitive-dismiss linky" onClick={onDismiss} aria-label="Dismiss">
-          Dismiss
+        <button className="sensitive-dismiss linky" onClick={onDismiss} aria-label="閉じる">
+          閉じる
         </button>
       </div>
 
@@ -111,13 +109,11 @@ export function SensitiveReview({
                 <span className="sensitive-dot sev-high" aria-hidden="true" />
                 <div className="sensitive-item-body">
                   <div className="sensitive-item-head">
-                    <span className="sensitive-label">Blurred on-screen details</span>
-                    <span className="sensitive-source">Screen images</span>
+                    <span className="sensitive-label">ぼかし処理した箇所</span>
+                    <span className="sensitive-source">画面画像</span>
                   </div>
                   <span className="sensitive-snippet">
-                    {regions === 1 ? "1 area" : `${regions} areas`} covered across{" "}
-                    {frames === 1 ? "1 image" : `${frames} images`}. The on-screen text is not kept,
-                    so it can&apos;t be listed here.
+                    画像 {frames} 枚の {regions} 箇所をぼかしました。画面から読み取った文字は保存されないため、ここには表示されません。
                   </span>
                 </div>
               </div>
@@ -125,10 +121,7 @@ export function SensitiveReview({
           </div>
 
           <p className="sensitive-caveat">
-            This ran on your computer and hid these before anything was sent to your AI provider. It
-            covers secrets and personal details in the text that is sent (window titles, URLs,
-            clipboard, terminal commands, notes, and voice) and in your screen images. It is on by
-            default; you can turn it off in What&apos;s recorded.
+            AI プロバイダーに送信する前に、このPCでテキスト（ウィンドウのタイトル、URL、コピーした内容、コマンド、補足情報、音声の文字起こし）と画面画像を確認し、機密情報や個人情報を隠しました。既定ではオンで、「記録と送信の内容」で切り替えられます。
           </p>
         </div>
       )}

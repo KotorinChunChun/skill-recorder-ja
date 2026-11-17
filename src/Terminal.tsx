@@ -9,6 +9,7 @@ import type {
   TerminalShellDescriptor,
   TerminalStatus,
 } from "../common/terminal";
+import { japaneseMessage } from "./ui-messages";
 
 export function Terminal() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -145,7 +146,7 @@ export function Terminal() {
       </header>
       {(actionError || status?.error) && (
         <div className="terminal-error" role="alert">
-          {actionError ?? status?.error}
+          {japaneseMessage(actionError ?? status?.error)}
         </div>
       )}
       <div ref={hostRef} className="terminal-viewport" aria-label="記録対象のターミナル" />

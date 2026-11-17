@@ -322,22 +322,22 @@ export interface SensitiveReport {
 export function sourceLabel(source: SensitiveSource): string {
   switch (source) {
     case "window-title":
-      return "Window title";
+      return "ウィンドウのタイトル";
     case "url":
       return "URL";
     case "command":
-      return "Terminal command";
+      return "ターミナルのコマンド";
     case "terminal-output":
-      return "Terminal output";
+      return "ターミナルの出力";
     case "clipboard":
-      return "Clipboard";
+      return "クリップボード";
     case "note":
-      return "Note";
+      return "補足情報";
     case "narration":
-      return "Voice narration";
+      return "音声解説";
     case "frame":
-      return "On-screen text";
+      return "画面上の文字";
     case "other":
-      return "Other captured text";
+      return "その他の記録テキスト";
   }
 }

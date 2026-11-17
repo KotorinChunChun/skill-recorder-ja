@@ -34,21 +34,21 @@ export function skillPlacementModel(target: BuildTarget): SkillPlacementModel {
     const primary = placement === defaultPlacement;
     const label =
       placement === "install"
-        ? `Add to ${target.installTargetLabel}`
+        ? `${target.installTargetLabel} に追加`
         : primary
-          ? "Export skill"
-          : "Export…";
+          ? "スキルをエクスポート"
+          : "エクスポート…";
     const title =
       placement === "install"
-        ? `Add the skill to ${target.installTargetLabel} so it loads automatically`
-        : "Download the skill to a folder you choose";
+        ? `スキルを ${target.installTargetLabel} に追加して、自動で読み込めるようにする`
+        : "選択したフォルダーにスキルを保存";
     return { placement, primary, label, title };
   });
 
   return {
     defaultPlacement,
     actions,
-    installDoneTitle: `Added to ${target.installTargetLabel}`,
-    installDoneMessage: `is now in ${target.installTargetLabel} — it loads automatically.`,
+    installDoneTitle: `${target.installTargetLabel} に追加しました`,
+    installDoneMessage: `は ${target.installTargetLabel} に追加され、自動で読み込まれます。`,
   };
 }

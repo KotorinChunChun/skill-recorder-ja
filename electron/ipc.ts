@@ -133,7 +133,7 @@ export function registerIpc(
     try {
       return await imports.run("selection", async (signal) => {
         const options: OpenDialogOptions = {
-          title: "Import recording",
+          title: "録画を読み込む",
           properties: ["openFile"],
           filters: [{ name: "Recordings", extensions: ["mp4", "webm"] }],
         };
@@ -539,7 +539,7 @@ export function registerIpc(
       }
       const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
       const opts: SaveDialogOptions = {
-        title: "Download session details",
+        title: "セッションの詳細を保存",
         defaultPath: path.join(
           os.homedir(),
           "Downloads",
@@ -621,7 +621,7 @@ export function registerIpc(
           // ready-to-use <name>/SKILL.md inside it. A dismissed dialog is a cancel, not an error.
           const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
           const opts: OpenDialogOptions = {
-            title: "Export skill to folder",
+            title: "スキルの保存先を選択",
             defaultPath: path.join(os.homedir(), "Downloads"),
             properties: ["openDirectory", "createDirectory"],
           };
