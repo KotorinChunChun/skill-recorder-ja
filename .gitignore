@@ -6,6 +6,7 @@ release
 .compliance-cache
 .compliance-review
 *.log
+/dev/history/*/logs/
 .DS_Store
 
 # Eval run outputs (timestamped result logs)

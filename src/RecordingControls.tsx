@@ -7,9 +7,9 @@ import type {
 import type { TerminalStatus } from "../common/terminal";
 import {
   DEFAULT_NARRATION_LANGUAGE,
-  narrationLanguageLabel,
 } from "../common/narration";
 import { formatMs } from "./format";
+import { japaneseNarrationLanguage } from "./ui-language";
 
 export function RecordingControls() {
   const [status, setStatus] = useState<RecorderStatus | null>(null);
@@ -140,7 +140,7 @@ export function RecordingControls() {
     setActionError(null);
     const enable = status.microphone.state !== "on";
     const result = await window.skillRecorder.setMicrophoneEnabled(enable);
-    if (!result.ok) setActionError(result.error ?? "Could not change the microphone.");
+    if (!result.ok) setActionError(result.error ?? "マイクの状態を変更できませんでした。");
     setMicrophonePending(false);
   }, [status]);
 
@@ -150,7 +150,7 @@ export function RecordingControls() {
     const result = await window.skillRecorder.selectMicrophone(deviceId);
     setMicrophoneSettings(result.status);
     if (!result.ok) {
-      setActionError(result.error ?? "Could not switch microphones.");
+      setActionError(result.error ?? "マイクを切り替えられませんでした。");
     } else {
       setShowMicrophoneMenu(false);
     }
@@ -167,7 +167,7 @@ export function RecordingControls() {
       return;
     }
     if (!result.ok) {
-      setActionError(result.error ?? "Could not stop the recording.");
+      setActionError(result.error ?? "録画を停止できませんでした。");
       setFinishPending(null);
     }
   }, []);
@@ -183,7 +183,7 @@ export function RecordingControls() {
       return;
     }
     if (!result.ok) {
-      const error = result.error ?? "Could not discard the recording.";
+      const error = result.error ?? "録画を破棄できませんでした。";
       setActionError(error);
       setFinishPending(null);
       window.alert(error);
@@ -209,23 +209,23 @@ export function RecordingControls() {
   const lifecycleBusy = finishPending !== null || transitionBusy || !recording;
   const microphoneOn = status?.microphone.state === "on";
   const microphoneError = status?.microphone.state === "error";
-  const narrationLanguage = narrationLanguageLabel(
+  const narrationLanguage = japaneseNarrationLanguage(
     status?.narrationLanguage ?? DEFAULT_NARRATION_LANGUAGE,
   );
   const activeMicrophoneLabel =
     status?.microphone.activeDevice?.label ??
     microphoneSettings?.selectedDeviceLabel ??
-    "System default";
+    "システムの既定";
   const microphoneLabel =
     status?.microphone.state === "starting"
-      ? "Starting"
+      ? "開始中"
       : status?.microphone.state === "stopping"
-        ? "Stopping"
+        ? "停止中"
         : microphoneOn
-          ? "On"
+          ? "オン"
           : microphoneError
-            ? "Retry"
-            : "Off";
+            ? "再試行"
+            : "オフ";
   const error =
     actionError ??
     status?.microphone.error ??
@@ -234,12 +234,12 @@ export function RecordingControls() {
     null;
   const captureLabel =
     status?.transition === "starting"
-      ? "Starting"
+      ? "開始中"
       : status?.transition === "stopping"
-        ? "Saving"
+        ? "保存中"
         : status?.transition === "discarding"
-          ? "Discarding"
-          : "Capturing";
+          ? "破棄中"
+          : "録画中";
 
   return (
     <div
@@ -259,9 +259,9 @@ export function RecordingControls() {
           aria-describedby="recording-discard-description"
         >
           <div>
-            <h2 id="recording-discard-title">Discard this recording?</h2>
+            <h2 id="recording-discard-title">この録画を破棄しますか？</h2>
             <p id="recording-discard-description">
-              Screen video, activity, recorded-terminal output, and voice segments will be permanently deleted.
+              画面の動画、操作履歴、ターミナル出力、音声は完全に削除されます。
             </p>
           </div>
           <div className="recording-discard-actions">
@@ -271,14 +271,14 @@ export function RecordingControls() {
               disabled={finishPending === "discard"}
               onClick={() => setConfirmDiscard(false)}
             >
-              Keep recording
+              録画を続ける
             </button>
             <button
               className="recording-confirm-discard"
               disabled={finishPending === "discard"}
               onClick={() => void discard()}
             >
-              {finishPending === "discard" ? "Discarding..." : "Discard recording"}
+              {finishPending === "discard" ? "破棄中…" : "録画を破棄"}
             </button>
           </div>
         </section>
@@ -293,9 +293,9 @@ export function RecordingControls() {
           aria-describedby="recording-terminal-description"
         >
           <div>
-            <h2 id="recording-terminal-title">A terminal command is still running</h2>
+            <h2 id="recording-terminal-title">ターミナルでコマンドが実行中です</h2>
             <p id="recording-terminal-description">
-              Closing the recording will stop the command and save its output as interrupted.
+              録画を終了すると、実行中のコマンドも終了します。そこまでの出力は中断された結果として保存されます。
             </p>
           </div>
           <div className="recording-discard-actions">
@@ -303,7 +303,7 @@ export function RecordingControls() {
               className="recording-keep"
               onClick={() => setTerminalConfirm(null)}
             >
-              Keep recording
+              録画を続ける
             </button>
             <button
               className={
@@ -319,8 +319,8 @@ export function RecordingControls() {
               }}
             >
               {terminalConfirm === "discard"
-                ? "Close terminal and discard"
-                : "Close terminal and save"}
+                ? "ターミナルを閉じて破棄"
+                : "ターミナルを閉じて保存"}
             </button>
           </div>
         </section>
@@ -330,20 +330,20 @@ export function RecordingControls() {
         <section
           ref={microphoneMenuRef}
           className="recording-microphone-menu"
-          aria-label="Choose microphone"
+          aria-label="マイクを選択"
         >
           <header>
-            <strong>Microphone</strong>
+            <strong>マイク</strong>
             <span>
               {microphoneOn
-                ? `Using ${activeMicrophoneLabel}`
-                : `Next: ${microphoneSettings?.selectedDeviceLabel ?? "System default"}`}
+                ? `使用中 · ${activeMicrophoneLabel}`
+                : `次に使用 · ${microphoneSettings?.selectedDeviceLabel ?? "システムの既定"}`}
             </span>
           </header>
           <div
             className="recording-microphone-options"
             role="radiogroup"
-            aria-label="Audio input"
+            aria-label="音声入力"
           >
             {microphoneSettings?.devices.map((device) => {
               const selected =
@@ -361,7 +361,7 @@ export function RecordingControls() {
                   <span>{device.label}</span>
                   {selected && (
                     <span className="recording-microphone-selected">
-                      Selected
+                      選択中
                     </span>
                   )}
                 </button>
@@ -415,16 +415,16 @@ export function RecordingControls() {
               disabled={lifecycleBusy || microphoneBusy}
               aria-label={
                 microphoneOn
-                  ? `Mute ${activeMicrophoneLabel}. Narration is transcribed in ${narrationLanguage}.`
+                  ? `${activeMicrophoneLabel}をミュート。文字起こしの言語は${narrationLanguage}です。`
                   : microphoneError
-                    ? `Retry microphone. ${status?.microphone.error ?? ""}`
-                    : `Unmute ${microphoneSettings?.selectedDeviceLabel ?? "System default"} for ${narrationLanguage} narration`
+                    ? `マイクを再試行。${status?.microphone.error ?? ""}`
+                    : `${microphoneSettings?.selectedDeviceLabel ?? "システムの既定"}のミュートを解除。文字起こしの言語は${narrationLanguage}です。`
               }
               aria-pressed={microphoneOn}
               title={
                 microphoneOn
-                  ? `Mute ${activeMicrophoneLabel} · ${narrationLanguage} transcript`
-                  : `Unmute ${microphoneSettings?.selectedDeviceLabel ?? "System default"} · ${narrationLanguage} transcript`
+                  ? `マイクをオフ · ${activeMicrophoneLabel} · ${narrationLanguage}で文字起こし`
+                  : `マイクをオン · ${microphoneSettings?.selectedDeviceLabel ?? "システムの既定"} · ${narrationLanguage}で文字起こし`
               }
               onClick={() => void toggleMicrophone()}
             >
@@ -434,10 +434,10 @@ export function RecordingControls() {
             <button
               className="recording-microphone-menu-toggle"
               disabled={lifecycleBusy || microphoneBusy}
-              aria-label="Choose microphone"
+              aria-label="マイクを選択"
               aria-haspopup="dialog"
               aria-expanded={showMicrophoneMenu}
-              title="Choose microphone"
+              title="マイクを選択"
               onClick={() => {
                 setActionError(null);
                 setConfirmDiscard(false);
@@ -455,14 +455,14 @@ export function RecordingControls() {
             disabled={lifecycleBusy || terminalPending}
             aria-label={
               terminalStatus?.state === "closed"
-                ? "Open recorded terminal"
-                : `Focus recorded terminal. ${terminalStatus?.state ?? ""}`
+                ? "記録対象のターミナルを開く"
+                : `記録対象のターミナルに切り替える。${terminalStatus?.state ?? ""}`
             }
-            title="Open a terminal captured only with this recording"
+            title="この録画に記録するターミナルを開く"
             onClick={() => void openTerminal()}
           >
             <TerminalIcon />
-            <span>{terminalPending ? "Opening" : "Terminal"}</span>
+            <span>{terminalPending ? "起動中" : "ターミナル"}</span>
             {terminalStatus?.state !== "closed" && (
               <span
                 className={`recording-terminal-dot ${
@@ -482,10 +482,10 @@ export function RecordingControls() {
               setConfirmDiscard(true);
             }}
           >
-            Discard
+            破棄
           </button>
           <button className="recording-done" disabled={lifecycleBusy} onClick={() => void done(false)}>
-            {finishPending === "done" || status?.transition === "stopping" ? "Saving..." : "Done"}
+            {finishPending === "done" || status?.transition === "stopping" ? "保存中…" : "完了"}
           </button>
         </div>
         <span className="recording-drag-handle" aria-hidden />

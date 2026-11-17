@@ -7,6 +7,8 @@ import {
   Menu,
   screen,
 } from "electron";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
 
 import { FULL_CAPTURE } from "../common/config";
 import { IPC, type RecorderStatus, type StartResult } from "../common/ipc";
@@ -47,6 +49,12 @@ import {
   redockLibrary,
   setRecordingControlsExpanded,
 } from "./window";
+
+const profile = app.commandLine.getSwitchValue("user-data-dir") ||
+  path.join(app.getPath("appData"), "skill-recorder-ja");
+mkdirSync(profile, { recursive: true });
+app.setPath("userData", profile);
+app.name = "Skill Recorder 日本語版";
 
 const instanceReady = registerSingleInstance(app, {
   isQuitting: () => quitReady || quitTask !== null,
@@ -580,13 +588,13 @@ app.on("before-quit", (event) => {
     if (terminal.busy) {
       const { response } = await dialog.showMessageBox({
         type: "warning",
-        buttons: ["Keep recording", "Close terminal and quit"],
+        buttons: ["録画を続ける", "ターミナルを閉じて終了"],
         defaultId: 0,
         cancelId: 0,
-        message: "A terminal command is still running.",
+        message: "ターミナルでコマンドが実行中です。",
         detail: terminal.command
-          ? `Closing Skill Recorder will interrupt: ${terminal.command}`
-          : "Closing Skill Recorder will interrupt the active terminal session.",
+          ? `Skill Recorder を終了すると、実行中のコマンドが中断されます。${terminal.command}`
+          : "Skill Recorder を終了すると、実行中のターミナルが中断されます。",
       });
       if (response === 0) return;
     }

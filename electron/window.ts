@@ -53,7 +53,7 @@ export function createRecorderWindow(): BrowserWindow {
     resizable: false,
     maximizable: false,
     fullscreenable: false,
-    title: "Skill Recorder",
+    title: "Skill Recorder 日本語版",
     icon: windowIcon(),
     backgroundColor: "#faf8f5",
     webPreferences: {
@@ -97,7 +97,7 @@ export function createRecordingControlsWindow(): BrowserWindow {
     fullscreenable: false,
     closable: false,
     skipTaskbar: true,
-    title: "Skill Recorder: Recording controls",
+    title: "Skill Recorder 日本語版 — 録画操作",
     webPreferences: {
       preload: path.join(dirname, "preload.cjs"),
       contextIsolation: true,
@@ -134,7 +134,7 @@ export function createTerminalWindow(): BrowserWindow {
     minWidth: 560,
     minHeight: 360,
     show: false,
-    title: "Skill Recorder: Recorded terminal",
+    title: "Skill Recorder 日本語版 — 記録対象のターミナル",
     icon: windowIcon(),
     backgroundColor: "#211f1e",
     webPreferences: {
@@ -217,7 +217,7 @@ export function createLibraryWindow(recorder: BrowserWindow): BrowserWindow {
     minWidth: LIBRARY.floorWidth,
     minHeight: 480,
     show: false,
-    title: "Skill Recorder: Sessions",
+    title: "Skill Recorder 日本語版 — セッション一覧",
     icon: windowIcon(),
     backgroundColor: "#faf8f5",
     webPreferences: {

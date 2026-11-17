@@ -96,18 +96,18 @@ export function Terminal() {
 
   const stateLabel =
     switching
-      ? "Switching shell"
+      ? "シェルを切り替え中"
       : status?.state === "running"
-      ? "Command running"
+      ? "コマンドを実行中"
       : status?.state === "idle"
-        ? "Ready"
+        ? "準備完了"
         : status?.state === "starting"
-          ? "Starting"
+          ? "起動中"
           : status?.state === "error"
-            ? "Capture error"
+            ? "記録エラー"
             : status?.state === "exited"
-              ? "Shell exited"
-              : "Recorded terminal";
+              ? "シェルが終了しました"
+              : "記録対象のターミナル";
 
   return (
     <main className="terminal-page">
@@ -116,11 +116,11 @@ export function Terminal() {
           <span className={`terminal-state-dot ${status?.state ?? "closed"}`} aria-hidden />
           <span>
             <strong>{stateLabel}</strong>
-            <small>Output is saved only with this recording</small>
+            <small>出力はこの録画にだけ保存されます</small>
           </span>
         </div>
         <label className="terminal-shell-picker">
-          <span>Shell</span>
+          <span>シェル</span>
           <select
             value={status?.shell?.id ?? ""}
             disabled={switching || status?.busy || shells.length === 0}
@@ -140,7 +140,7 @@ export function Terminal() {
           className="terminal-hide"
           onClick={() => void window.skillRecorder.hideTerminal()}
         >
-          Hide
+          隠す
         </button>
       </header>
       {(actionError || status?.error) && (
@@ -148,7 +148,7 @@ export function Terminal() {
           {actionError ?? status?.error}
         </div>
       )}
-      <div ref={hostRef} className="terminal-viewport" aria-label="Recorded terminal" />
+      <div ref={hostRef} className="terminal-viewport" aria-label="記録対象のターミナル" />
     </main>
   );
 }

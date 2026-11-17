@@ -50,21 +50,19 @@ export function RecordingPrivacyWarning({
               />
             </svg>
           </span>
-          <h2 id="recording-warning-title">Before you record</h2>
+          <h2 id="recording-warning-title">録画を始める前に</h2>
         </header>
 
         <p id="recording-warning-copy" className="recording-warning-copy">
-          Keep passwords, access tokens, API keys, and other sensitive or confidential
-          information off screen and out of narration.
+          パスワード、アクセストークン、API キー、その他の機密情報は、画面に表示したり、音声解説に含めたりしないでください。
         </p>
         <p id="recording-warning-detail" className="recording-warning-detail">
-          For complete transparency, review exactly what&apos;s captured and what may later be
-          sent to the AI provider you choose for analysis.
+          録画を始める前に、記録される内容と、解析時に選択した AI プロバイダーに送信される可能性のある内容を確認できます。
         </p>
 
         <div className="recording-warning-actions">
           <button className="secondary" onClick={onReview} disabled={starting}>
-            See exactly what&apos;s captured
+            記録と送信の内容を確認
           </button>
           <button
             ref={startRef}
@@ -72,7 +70,7 @@ export function RecordingPrivacyWarning({
             onClick={onStart}
             disabled={starting}
           >
-            {starting ? "Starting…" : "Start recording"}
+            {starting ? "開始中…" : "録画を開始"}
           </button>
         </div>
       </div>

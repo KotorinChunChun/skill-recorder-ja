@@ -13,11 +13,11 @@ import {
   isNarrationLanguage,
   NARRATION_LANGUAGES,
   NARRATION_MODEL_DOWNLOAD_LABEL,
-  narrationLanguageLabel,
   type NarrationLanguage,
 } from "../common/narration";
 import { formatMs } from "./format";
-import { IMPORT_LIMIT_LABEL } from "../common/import";
+import { IMPORT_LIMITS } from "../common/import";
+import { japaneseNarrationLanguage } from "./ui-language";
 import { RecordingPrivacyWarning } from "./RecordingPrivacyWarning";
 import { WhatsRecorded } from "./WhatsRecorded";
 
@@ -133,10 +133,10 @@ export function Recorder() {
   const justSaved = !recording && status?.lastFinish?.outcome === "saved";
   const justDiscarded = !recording && status?.lastFinish?.outcome === "discarded";
   const narrate = microphoneSettings?.narrationEnabled ?? false;
-  const narrationLanguageName = narrationLanguageLabel(narrationLanguage);
+  const narrationLanguageName = japaneseNarrationLanguage(narrationLanguage);
   const advancedOn = sensitive?.enabled ?? true;
   const selectedScreenLabel =
-    screenSettings?.selectedSourceLabel ?? "Loading screens...";
+    screenSettings?.selectedSourceLabel ?? "画面を読み込み中…";
 
   useEffect(() => {
     if (recording) {
@@ -213,7 +213,7 @@ export function Recorder() {
   const toggle = useCallback(async () => {
     if (recording) {
       const res = await window.skillRecorder.stop();
-      if (!res.ok) window.alert(res.error ?? "Action failed");
+      if (!res.ok) window.alert(res.error ?? "操作を完了できませんでした。");
       applyRecorderStatus(await window.skillRecorder.status());
       return;
     }
@@ -223,7 +223,7 @@ export function Recorder() {
       setShowRecordingWarning(true);
       return;
     }
-    if (!res.ok) window.alert(res.error ?? "Action failed");
+    if (!res.ok) window.alert(res.error ?? "操作を完了できませんでした。");
     applyRecorderStatus(await window.skillRecorder.status());
   }, [applyRecorderStatus, recording]);
 
@@ -232,7 +232,7 @@ export function Recorder() {
     const res = await window.skillRecorder.confirmStart();
     if (!res.ok) {
       setWarningStarting(false);
-      window.alert(res.error ?? "Could not start recording.");
+      window.alert(res.error ?? "録画を開始できませんでした。");
       return;
     }
     setShowRecordingWarning(false);
@@ -260,12 +260,12 @@ export function Recorder() {
   const selectNarrationLanguage = useCallback(
     async (value: string) => {
       if (!isNarrationLanguage(value)) {
-        window.alert("Unsupported narration language.");
+        window.alert("この言語の文字起こしには対応していません。");
         return;
       }
       setSelectedNarrationLanguage(value);
       const result = await window.skillRecorder.setNarrationLanguage(value);
-      if (!result.ok) window.alert(result.error ?? "Could not change the narration language.");
+      if (!result.ok) window.alert(result.error ?? "文字起こしの言語を変更できませんでした。");
       applyRecorderStatus(await window.skillRecorder.status());
     },
     [applyRecorderStatus],
@@ -281,7 +281,7 @@ export function Recorder() {
     setMicrophoneSettings(result.status);
     if (!result.ok) {
       setMicrophoneActionError(
-        result.error ?? "Could not update the narration preference.",
+        result.error ?? "音声解説の設定を更新できませんでした。",
       );
       setShowNarrationSettings(true);
     }
@@ -295,7 +295,7 @@ export function Recorder() {
     setMicrophoneSettings(result.status);
     if (!result.ok) {
       setMicrophoneActionError(
-        result.error ?? "Could not select that microphone.",
+        result.error ?? "マイクを選択できませんでした。",
       );
     }
     setMicrophonePending(false);
@@ -307,7 +307,7 @@ export function Recorder() {
     const result = await window.skillRecorder.selectScreen(sourceId);
     setScreenSettings(result.status);
     if (!result.ok) {
-      setScreenActionError(result.error ?? "Could not select that screen.");
+      setScreenActionError(result.error ?? "画面を選択できませんでした。");
     }
     setScreenPending(false);
   }, []);
@@ -326,22 +326,22 @@ export function Recorder() {
         await refreshCount();
         await window.skillRecorder.openLibrary(result.sessionId);
       } else if (!result.canceled) {
-        setImportError(result.error ?? "Could not import this recording.");
+        setImportError(result.error ?? "録画を読み込めませんでした。");
       }
     } catch (error) {
-      setImportError(`Could not import this recording: ${String(error)}`);
+      setImportError(`録画を読み込めませんでした。${String(error)}`);
     } finally { setImportPending(false); setImportCanceling(false); }
   }, [refreshCount]);
 
   const cancelImport = useCallback(async () => {
     setImportCanceling(true);
     try { await window.skillRecorder.cancelImport(); }
-    catch (error) { setImportError(`Could not cancel import: ${String(error)}`); setImportCanceling(false); }
+    catch (error) { setImportError(`読み込みを取り消せませんでした。${String(error)}`); setImportCanceling(false); }
   }, []);
 
   const downloadNarrationModel = useCallback(async () => {
     const res = await window.skillRecorder.downloadNarrationModel();
-    if (!res.ok) window.alert(res.error ?? "Could not download the voice transcription model.");
+    if (!res.ok) window.alert(res.error ?? "文字起こしモデルをダウンロードできませんでした。");
   }, []);
 
   const toggleAdvanced = useCallback(async () => {
@@ -352,14 +352,14 @@ export function Recorder() {
     const res = await window.skillRecorder.setAdvancedProtection(next);
     if (!res.ok) {
       void window.skillRecorder.sensitiveModelStatus().then(setSensitive);
-      window.alert(res.error ?? "Could not update advanced protection.");
+      window.alert(res.error ?? "高度な保護の設定を更新できませんでした。");
     }
     setAdvancedPending(false);
   }, [sensitive]);
 
   const downloadSensitiveModels = useCallback(async () => {
     const res = await window.skillRecorder.downloadSensitiveModels();
-    if (!res.ok) window.alert(res.error ?? "Could not download the protection models.");
+    if (!res.ok) window.alert(res.error ?? "保護モデルをダウンロードできませんでした。");
   }, []);
 
   return (
@@ -370,7 +370,7 @@ export function Recorder() {
           className={`record ${recording ? "on" : ""}`}
           onClick={toggle}
           disabled={transitioning || microphonePending || screenPending}
-          aria-label={recording ? "Stop recording" : "Start recording"}
+          aria-label={recording ? "録画を停止" : "録画を開始"}
         >
           <span className="record-glyph" />
         </button>
@@ -378,8 +378,8 @@ export function Recorder() {
           className="import-recording"
           onClick={() => void importRecording()}
           disabled={recording || transitioning || importPending || microphonePending || screenPending}
-          aria-label="Import recording"
-          title={`Import recording (${IMPORT_LIMIT_LABEL})`}
+          aria-label="録画を読み込む"
+          title={`録画を読み込む（MP4 または WebM、最大 ${IMPORT_LIMITS.bytes / 1024 ** 2} MiB・${IMPORT_LIMITS.durationMs / 60_000} 分）`}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3V7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
@@ -388,8 +388,8 @@ export function Recorder() {
         </div>
         {importPending && (
           <div className="import-notice" role="status">
-            <span>{importCanceling ? "Canceling import..." : "Checking recording compatibility..."}</span>
-            <button className="linky" disabled={importCanceling} onClick={() => void cancelImport()}>Cancel</button>
+            <span>{importCanceling ? "読み込みを取り消し中…" : "録画ファイルの形式を確認中…"}</span>
+            <button className="linky" disabled={importCanceling} onClick={() => void cancelImport()}>キャンセル</button>
           </div>
         )}
         {importError && <p className="import-error" role="alert">{importError}</p>}
@@ -398,14 +398,14 @@ export function Recorder() {
         </div>
         <div className="transport-sub">
           {recording
-            ? `${status?.eventCount ?? 0} events captured`
+            ? `${status?.eventCount ?? 0} 件の操作を記録`
             : justSaved
-              ? "Capture saved. Open Sessions to analyze"
+              ? "録画を保存しました。セッション一覧から解析できます"
               : justDiscarded
-                ? "Recording discarded"
+                ? "録画を破棄しました"
               : screenSettings?.error
-                ? "Screen capture needs attention"
-                : `Ready to capture · ${selectedScreenLabel}`}
+                ? "画面の録画設定を確認してください"
+                : `録画できます · ${selectedScreenLabel}`}
         </div>
       </div>
 
@@ -450,28 +450,28 @@ export function Recorder() {
               </svg>
             </span>
             <span className="narrate-text">
-              <span className="narrate-label">Narrate</span>
+              <span className="narrate-label">音声解説</span>
               <span className="narrate-sub">
                 {microphonePending
-                  ? "Requesting microphone access..."
+                  ? "マイクの使用許可を確認中…"
                   : microphoneActionError || microphoneSettings?.error
-                    ? "Microphone needs attention"
+                    ? "マイクの設定を確認してください"
                     : recording
                       ? narrate
-                        ? `Listening · ${narrationLanguageName}`
-                        : "Voice off for this recording"
+                        ? `音声を収録中 · ${narrationLanguageName}`
+                        : "この録画の音声解説はオフ"
                       : narrate
                         ? narrationLanguageName
-                        : "Explain out loud (optional)"}
+                        : "操作を声で説明する（任意）"}
               </span>
             </span>
           </button>
           <button
             className={`narrate-settings-toggle ${showNarrationSettings ? "open" : ""}`}
-            aria-label="Recording settings"
+            aria-label="録画設定"
             aria-controls="recording-settings"
             aria-expanded={showNarrationSettings}
-            title="Recording settings"
+            title="録画設定"
             disabled={microphonePending || screenPending || recording || transitioning}
             onClick={() => {
               setMicrophoneActionError(null);
@@ -515,7 +515,7 @@ export function Recorder() {
               onClick={() => setShowNarrationSettings(false)}
             />
             <div id="recording-settings" className="narrate-settings">
-            <label htmlFor="narrate-language">Language</label>
+            <label htmlFor="narrate-language">文字起こしの言語</label>
             <div className="narrate-select-wrap">
               <select
                 id="narrate-language"
@@ -524,11 +524,11 @@ export function Recorder() {
                 onChange={(event) =>
                   void selectNarrationLanguage(event.currentTarget.value)
                 }
-                title="The transcript stays in this language"
+                title="選択した言語のまま文字起こしします"
               >
-                {NARRATION_LANGUAGES.map(({ code, label }) => (
+                {NARRATION_LANGUAGES.map(({ code }) => (
                   <option key={code} value={code}>
-                    {label}
+                    {japaneseNarrationLanguage(code)}
                   </option>
                 ))}
               </select>
@@ -537,7 +537,7 @@ export function Recorder() {
               </span>
             </div>
 
-            <label htmlFor="narrate-microphone">Microphone</label>
+            <label htmlFor="narrate-microphone">マイク</label>
             <div className="narrate-select-wrap">
               <select
                 id="narrate-microphone"
@@ -552,14 +552,14 @@ export function Recorder() {
                     </option>
                   ))
                 ) : (
-                  <option value="">Loading microphones...</option>
+                  <option value="">マイクを読み込み中…</option>
                 )}
               </select>
               <span className="narrate-select-chevron" aria-hidden>
                 ▾
               </span>
             </div>
-            <label htmlFor="recording-screen">Screen</label>
+            <label htmlFor="recording-screen">画面</label>
             <div className="narrate-select-wrap">
               <select
                 id="recording-screen"
@@ -581,7 +581,7 @@ export function Recorder() {
                   ))
                 ) : (
                   <option value="">
-                    {screenSettings ? "No screens available" : "Loading screens..."}
+                    {screenSettings ? "利用できる画面がありません" : "画面を読み込み中…"}
                   </option>
                 )}
               </select>
@@ -653,11 +653,11 @@ export function Recorder() {
           </svg>
         </span>
         <span className="privacy-note-text">
-          <span className="privacy-note-title">Records your screen and activity</span>
-          <span className="privacy-note-sub">See exactly what's captured</span>
+          <span className="privacy-note-title">画面と操作の記録</span>
+          <span className="privacy-note-sub">記録と送信の内容を確認</span>
         </span>
         {!advancedOn ? (
-          <span className="privacy-note-badge is-off">Protection off</span>
+          <span className="privacy-note-badge is-off">保護オフ</span>
         ) : null}
         <span className="privacy-note-chevron" aria-hidden>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -677,10 +677,10 @@ export function Recorder() {
         onClick={openLibrary}
         aria-label={
           pendingCount > 0
-            ? `Review sessions, ${pendingCount} ready to analyze`
+            ? `セッション一覧、未解析 ${pendingCount} 件`
             : sessionCount === 0
-              ? "Review sessions, nothing recorded yet"
-              : `Review sessions, ${sessionCount} recorded`
+              ? "セッション一覧、録画なし"
+              : `セッション一覧、録画 ${sessionCount} 件`
         }
       >
         <span className="sessions-open-icon" aria-hidden>
@@ -709,15 +709,15 @@ export function Recorder() {
         </span>
         <span className="sessions-open-text">
           <span className="sessions-open-label">
-            Review sessions
+            セッション一覧
             {pendingCount > 0 && <span className="sessions-open-flag">{pendingCount}</span>}
           </span>
           <span className={`sessions-open-sub ${pendingCount > 0 ? "is-new" : ""}`}>
             {pendingCount > 0
-              ? `${pendingCount} ready to analyze`
+              ? `${pendingCount} 件が未解析`
               : sessionCount === 0
-                ? "No recordings yet"
-                : `${sessionCount} recording${sessionCount === 1 ? "" : "s"}`}
+                ? "録画はまだありません"
+                : `録画 ${sessionCount} 件`}
           </span>
         </span>
         <span className="sessions-open-chevron" aria-hidden>
@@ -736,9 +736,9 @@ export function Recorder() {
       {doctor && (
         <div className="doctor">
           <Row
-            label="Copilot runtime"
+            label="Copilot 実行環境"
             status={doctor.copilotCli.ok ? "good" : "bad"}
-            note={doctor.copilotCli.ok ? "found" : "missing"}
+            note={doctor.copilotCli.ok ? "利用可能" : "見つかりません"}
           />
           {narrate && narrationStatus && (
             <VoiceModelRow
@@ -757,7 +757,7 @@ export function Recorder() {
         </div>
       )}
 
-      <p className="hint">{TOGGLE_SHORTCUT} toggles from anywhere</p>
+      <p className="hint">{TOGGLE_SHORTCUT} で録画の開始・停止</p>
 
       {showRecordingWarning && (
         <RecordingPrivacyWarning
@@ -819,26 +819,26 @@ function VoiceModelRow({
   onDownload: () => void;
 }) {
   if (status.phase === "downloading") {
-    const progress = status.progress == null ? "downloading" : `${status.progress}%`;
-    return <Row label="voice transcription" status="warn" note={progress} />;
+    const progress = status.progress == null ? "ダウンロード中" : `${status.progress}%`;
+    return <Row label="文字起こし" status="warn" note={progress} />;
   }
   if (status.phase === "loading") {
-    return <Row label="voice transcription" status="warn" note="preparing" />;
+    return <Row label="文字起こし" status="warn" note="準備中" />;
   }
   if (status.model === "ready") {
-    return <Row label="voice transcription" status="good" note="on-device · multilingual" />;
+    return <Row label="文字起こし" status="good" note="端末内 · 多言語対応" />;
   }
   return (
     <Row
-      label="voice transcription"
+      label="文字起こし"
       status="warn"
       note={
         status.model === "error"
-          ? "download failed"
-          : `${NARRATION_MODEL_DOWNLOAD_LABEL} · multilingual`
+          ? "ダウンロード失敗"
+          : `${NARRATION_MODEL_DOWNLOAD_LABEL} · 多言語対応`
       }
       action={{
-        label: status.model === "error" ? "retry" : "download",
+        label: status.model === "error" ? "再試行" : "ダウンロード",
         disabled: recording,
         onClick: onDownload,
       }}
@@ -860,19 +860,19 @@ function SensitiveModelRow({
 }) {
   if (!status.enabled) return null;
   if (status.ocr === "downloading") {
-    const note = status.progress == null ? "downloading" : `${Math.round(status.progress)}%`;
-    return <Row label="advanced protection" status="warn" note={note} />;
+    const note = status.progress == null ? "ダウンロード中" : `${Math.round(status.progress)}%`;
+    return <Row label="高度な保護" status="warn" note={note} />;
   }
   if (status.ocr === "ready") {
-    return <Row label="advanced protection" status="good" note="on-device" />;
+    return <Row label="高度な保護" status="good" note="端末内" />;
   }
   const failed = status.ocr === "error";
   return (
     <Row
-      label="advanced protection"
+      label="高度な保護"
       status="bad"
-      note={failed ? "download failed" : "not downloaded"}
-      action={{ label: failed ? "retry" : "download", disabled: recording, onClick: onDownload }}
+      note={failed ? "ダウンロード失敗" : "未ダウンロード"}
+      action={{ label: failed ? "再試行" : "ダウンロード", disabled: recording, onClick: onDownload }}
     />
   );
 }

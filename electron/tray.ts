@@ -30,19 +30,19 @@ export function createTray(
   showRecordingControls: () => void,
 ): Tray {
   const tray = new Tray(trayIcon() ?? fallbackTrayIcon());
-  tray.setToolTip("Skill Recorder");
+  tray.setToolTip("Skill Recorder 日本語版");
 
   const rebuild = () => {
     const recording = recorder.state === "recording";
     tray.setContextMenu(
       Menu.buildFromTemplate([
         {
-          label: recording ? "Stop recording" : "Start recording",
+          label: recording ? "録画を停止" : "録画を開始",
           click: () => void (recording ? stopRecording() : startRecording()),
         },
         { type: "separator" },
         {
-          label: recording ? "Show recording controls" : "Show window",
+          label: recording ? "録画操作バーを表示" : "ウィンドウを表示",
           click: () => {
             if (recording) {
               showRecordingControls();
@@ -51,7 +51,7 @@ export function createTray(
             showRecorderWindow();
           },
         },
-        { label: "Quit", role: "quit" },
+        { label: "終了", role: "quit" },
       ]),
     );
   };

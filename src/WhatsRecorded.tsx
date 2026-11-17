@@ -4,18 +4,18 @@ import type { SensitiveModelStatus } from "../common/ipc";
 
 /** Human-readable status for the on-device protection model shown in the sheet. */
 function protectionModelNote(status: SensitiveModelStatus | null): string {
-  if (!status) return "Checking…";
+  if (!status) return "確認中…";
   switch (status.ocr) {
     case "ready":
-      return "On-device model ready";
+      return "このPCのモデルを利用できます";
     case "downloading":
       return status.progress == null
-        ? "Setting up the on-device model…"
-        : `Setting up the on-device model… ${Math.round(status.progress)}%`;
+        ? "このPCにモデルを準備中…"
+        : `このPCにモデルを準備中…${Math.round(status.progress)}%`;
     case "error":
-      return "Couldn't set up the model";
+      return "モデルを準備できませんでした";
     default:
-      return "On-device model not set up yet";
+      return "このPCのモデルは未設定です";
   }
 }
 
@@ -88,100 +88,81 @@ export function WhatsRecorded({
               />
             </svg>
           </span>
-          <h2 id="whats-recorded-title">What's recorded</h2>
+          <h2 id="whats-recorded-title">記録と送信の内容</h2>
         </header>
 
         <p className="sheet-lead">
-          This tool records your screen and activity so it can turn what you did into a reusable
-          skill. Here is exactly what it captures and what leaves your computer.
+          Skill Recorder は画面と操作を記録し、操作手順を再利用できるスキルにします。記録される内容と、このPCから送信される内容は次のとおりです。
         </p>
 
         <section className="sheet-block">
-          <h3>While you're recording</h3>
-          <p className="sheet-note">Only between Start and Stop.</p>
+          <h3>録画中に記録されるもの</h3>
+          <p className="sheet-note">録画の開始から停止までが対象です。</p>
           <ul>
-            <li>Which apps you switch to, and their window and document titles.</li>
-            <li>Web addresses of the pages you open.</li>
-            <li>A short preview of text you copy, up to 120 characters.</li>
-            <li>A silent video of the screen you select, at a low frame rate.</li>
+            <li>切り替えたアプリと、そのウィンドウやドキュメントのタイトル。</li>
+            <li>開いたページのウェブアドレス。</li>
+            <li>コピーしたテキストの冒頭（最大120文字）。</li>
+            <li>選択した画面の無音の動画（低フレームレート）。</li>
             <li>
-              If you open the recorded terminal from the floating bar: its commands, working
-              folders, exit status, timing, and complete terminal output.
+              録画操作バーからターミナルを開いた場合は、そのコマンド、作業フォルダー、終了状態、実行時刻、全出力。
             </li>
           </ul>
           <p className="sheet-caution">
-            Do not type, paste, display, copy, or narrate passwords, access tokens, API keys,
-            credentials, secrets, or other sensitive or confidential information. Anything visible
-            on screen can appear in the recording, and copied text previews and narration are
-            captured too.
+            パスワード、アクセストークン、API キー、認証情報などの機密情報を入力、貼り付け、表示、コピー、読み上げしないでください。画面に表示した内容のほか、コピーしたテキストの冒頭や音声解説も録画に含まれます。
           </p>
         </section>
 
         <section className="sheet-block">
-          <h3>Recorded terminal (only if you open it)</h3>
+          <h3>記録対象のターミナル（開いた場合のみ）</h3>
           <ul>
-            <li>Only the terminal opened from the floating recording bar is captured.</li>
+            <li>録画操作バーから開いたターミナルだけが対象です。</li>
             <li>
-              Its full output stays with this recording and has no app-imposed size limit, so
-              long-running or noisy commands can make the saved recording much larger.
+              ターミナルの出力はすべて録画と一緒に保存されます。アプリによるサイズ制限はないため、長時間動くコマンドや出力の多いコマンドは、録画の保存容量を大きくすることがあります。
             </li>
             <li>
-              Skill Recorder does not edit shell profiles, install global hooks, watch existing
-              terminals, or keep recording commands after this recording ends.
+              シェルのプロファイルの編集、システム全体へのフックの追加、既存のターミナルの監視、録画終了後のコマンド記録は行いません。
             </li>
           </ul>
         </section>
 
         <section className="sheet-block">
-          <h3>Voice narration (only if you turn it on)</h3>
+          <h3>音声解説（オンにした場合のみ）</h3>
           <p className="sheet-note">
-            Off by default. Choose the initial state and microphone with Narrate, then use the
-            floating recording bar.
+            既定ではオフです。「音声解説」で録画開始時の状態とマイクを選び、録画中は操作バーで切り替えます。
           </p>
           <ul>
             <li>
-              Enabling Narrate briefly opens and releases the microphone so the app can request
-              permission and show the available inputs. No audio is saved during this check.
+              音声解説をオンにすると、使用許可の確認と利用できる入力の一覧表示のため、マイクに短時間アクセスします。この確認で音声は保存されません。
             </li>
-            <li>Your microphone audio is saved only while it is on and a recording is running.</li>
+            <li>マイク音声は、録画中にマイクがオンの間だけ保存されます。</li>
             <li>
-              Turning the microphone off ends that voice segment and releases the device. Turning it
-              on again, or switching inputs, starts a new segment linked to the same recording
-              timeline.
+              マイクをオフにすると、その音声区間が終了してマイクが解放されます。再びオンにするか別の入力に切り替えると、同じ録画内に新しい音声区間が作られます。
             </li>
             <li>
-              The recording can be turned into text on this computer using an on-device model. The
-              transcript stays in the language you select from Whisper's 99 supported choices. The
-              first transcription needs a one-time ~252 MB download that you choose when to start.
+              音声は端末内のモデルで文字起こしできます。Whisper が対応する99言語から選んだ言語で文字起こしします。初回は約252 MBのダウンロードが必要で、開始するタイミングは自分で選べます。
             </li>
-            <li>Leave Narrate and the recording-bar microphone off and no microphone is opened.</li>
+            <li>音声解説と録画操作バーのマイクを両方オフにすると、マイクは使われません。</li>
           </ul>
         </section>
 
         <section className="sheet-block">
-          <h3>Where it's stored</h3>
+          <h3>保存先</h3>
           <ul>
-            <li>Recordings are saved on this computer, in the app's own session folder.</li>
-            <li>Recordings stay until you delete them. You can delete any recording from Sessions.</li>
-            <li>AI connection settings and SDK conversation state live outside recording folders. Forget key removes the credential, not recordings or conversation history.</li>
+            <li>録画はこのPCのアプリ専用セッションフォルダーに保存されます。</li>
+            <li>録画は削除するまで残ります。セッション一覧から個別に削除できます。</li>
+            <li>AI 接続の設定と SDK の会話状態は、録画フォルダーの外に保存されます。API キーを削除しても、録画と会話履歴は残ります。</li>
           </ul>
         </section>
 
         <section className="sheet-block">
-          <h3>What's sent for analysis</h3>
+          <h3>解析に送信されるもの</h3>
           <ul>
-            <li>Nothing leaves your computer while you record.</li>
+            <li>録画中にこのPCから送信されるデータはありません。</li>
             <li>
-              When you choose Analyze, the event timeline (window and document titles, URLs, and
-              clipboard previews and recorded-terminal commands), plus screen images, narration
-              text, and only the bounded terminal-output excerpts needed for analysis, are sent
-              to the AI provider you choose: GitHub Copilot or your configured BYOM endpoint.
-              The selected destination is shown in Sessions before analysis.
+              「解析」を選ぶと、操作履歴（ウィンドウとドキュメントのタイトル、URL、コピーしたテキストの冒頭、記録対象のターミナルのコマンド）、画面画像、文字起こし結果、解析に必要な範囲のターミナル出力が、選択した AI プロバイダーに送られます。送信先は GitHub Copilot または設定したモデルの接続先で、解析の前にセッション一覧に表示されます。
             </li>
             <li>
-              By default, before anything is sent, this computer hides sensitive details like
-              passwords, keys, emails, and card or ID numbers from that text and from your screen
-              images. You can turn this off below.
+              既定では送信前に、このPCでテキストと画面画像のパスワード、キー、メールアドレス、カード番号や識別番号などの機密情報を隠します。この設定は下で変更できます。
             </li>
           </ul>
         </section>
@@ -189,11 +170,9 @@ export function WhatsRecorded({
         <section className={`sheet-block sheet-advp ${advancedOn ? "on" : ""}`}>
           <div className="sheet-advp-head">
             <div className="sheet-advp-copy">
-              <h3>Advanced protection</h3>
+              <h3>高度な保護</h3>
               <p className="sheet-note">
-                On by default. Before your recording is analyzed, it checks the text and your screen
-                images on this computer and hides sensitive details. Turn it off to send everything
-                as recorded.
+                既定ではオンです。録画を解析する前に、このPCでテキストと画面画像を確認し、機密情報を隠します。オフにすると記録した内容がそのまま送信されます。
               </p>
             </div>
             <button
@@ -202,7 +181,7 @@ export function WhatsRecorded({
               role="switch"
               aria-checked={advancedOn}
               aria-busy={advancedPending}
-              aria-label="Advanced protection"
+              aria-label="高度な保護"
               disabled={advancedPending}
               onClick={onToggleAdvanced}
             >
@@ -215,43 +194,39 @@ export function WhatsRecorded({
             <>
               <ul>
                 <li>
-                  It hides sensitive details like                   passwords, keys, emails, and card or ID numbers, both in the text that is sent
-                  (including narration and terminal output) and in your screen images.
+                  送信するテキスト（音声の文字起こしとターミナル出力を含む）と画面画像から、パスワード、キー、メールアドレス、カード番号や識別番号などを隠します。
                 </li>
                 <li>
-                  Turning it off sends your recording as recorded. That can make the analysis more
-                  accurate, but nothing is hidden, so only do it when the recording has nothing
-                  sensitive.
+                  オフにすると記録内容をそのまま送るため、解析精度が上がる場合があります。機密情報が含まれていない録画に限ってオフにしてください。
                 </li>
-                <li>It all runs on this computer.</li>
+                <li>この処理はすべてこのPCで行われます。</li>
               </ul>
               <div className={`sheet-advp-status ${showModelError ? "is-error" : ""}`}>
                 <span className="sheet-advp-model">{protectionModelNote(sensitive)}</span>
                 {showDownloadAction && (
                   <button type="button" className="sheet-advp-download" onClick={onDownload}>
-                    {sensitive?.ocr === "error" ? "Retry" : "Set up now"}
+                    {sensitive?.ocr === "error" ? "再試行" : "今すぐ設定"}
                   </button>
                 )}
               </div>
               <p className="sheet-caution">
-                No method is 100% effective. It can miss details or mask the wrong ones. Treat it as
-                a safety net, not a guarantee, and still avoid capturing anything secret.
+                機密情報を見逃したり、別の情報を誤って隠したりすることがあります。録画に機密情報を含めないでください。
               </p>
             </>
           )}
         </section>
 
         <section className="sheet-block">
-          <h3>What it never does</h3>
+          <h3>記録されないもの</h3>
           <ul>
-            <li>It does not log your keystrokes.</li>
-            <li>It does not capture commands from Terminal, PowerShell, or other terminal apps.</li>
-            <li>It only captures while a recording is running. Nothing runs in the background.</li>
+            <li>キー入力は記録されません。</li>
+            <li>Terminal や PowerShell など、別のターミナルアプリで実行したコマンドは記録されません。</li>
+            <li>録画している間だけ記録します。バックグラウンドでは記録されません。</li>
           </ul>
         </section>
 
         <button className="sheet-close" onClick={onReviewed}>
-          Got it
+          閉じる
         </button>
       </div>
     </div>
