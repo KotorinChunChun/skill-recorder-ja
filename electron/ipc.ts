@@ -32,7 +32,7 @@ import { IPC } from "../common/ipc";
 import { AiConnectionError, type AiConnectionResult } from "../common/ai-provider";
 import { aiConnection } from "./ai-provider";
 import type { AutomationPlan } from "../common/automation";
-import type { NarrationLanguage } from "../common/narration";
+import type { NarrationLanguagePreference } from "../common/narration";
 import type { ImportResult } from "../common/import";
 import type { ImportManager } from "./imports/manager";
 import { readSessionImport } from "./imports/metadata";
@@ -271,8 +271,8 @@ export function registerIpc(
       return { ok: true, status: microphones.settings() };
     },
   );
-  ipcMain.handle(IPC.narrationLanguage, (_event, language: NarrationLanguage) =>
-    recorder.setNarrationLanguage(language),
+  ipcMain.handle(IPC.narrationLanguage, (_event, preference: NarrationLanguagePreference) =>
+    recorder.setNarrationLanguage(preference),
   );
   ipcMain.handle(IPC.status, () => recorder.status());
   ipcMain.handle(IPC.marker, (_event, note: string) => recorder.marker(note));

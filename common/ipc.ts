@@ -1,7 +1,7 @@
 import type { Analysis, AnalysisFeedback, AnalysisStep, Confidence } from "./analysis";
 import type { AutomationPlan, BuiltAutomation } from "./automation";
 import type { MicrophoneDevice } from "./microphone";
-import type { NarrationLanguage } from "./narration";
+import type { NarrationLanguage, NarrationLanguagePreference } from "./narration";
 import type { ScreenSource } from "./screen";
 import type { SensitiveReport } from "./sensitive";
 import type {
@@ -95,8 +95,10 @@ export interface RecorderStatus {
   state: RecorderState;
   sessionId: string | null;
   startedAt: number | null;
-  /** Source language fixed for the active recording's narration. */
+  /** Effective source language, fixed for the active recording's narration. */
   narrationLanguage: NarrationLanguage;
+  narrationLanguagePreference: NarrationLanguagePreference;
+  defaultNarrationLanguage: NarrationLanguage;
   eventCount: number;
   transition: "none" | "starting" | "stopping" | "discarding";
   microphone: {
@@ -545,7 +547,7 @@ export interface SkillRecorderApi {
   stop(forceTerminal?: boolean): Promise<StopResult>;
   discard(forceTerminal?: boolean): Promise<DiscardResult>;
   setMicrophoneEnabled(enabled: boolean): Promise<MicrophoneResult>;
-  setNarrationLanguage(language: NarrationLanguage): Promise<NarrationLanguageResult>;
+  setNarrationLanguage(preference: NarrationLanguagePreference): Promise<NarrationLanguageResult>;
   microphoneSettings(): Promise<MicrophoneSettingsStatus>;
   setNarrationEnabled(enabled: boolean): Promise<MicrophoneSettingsResult>;
   selectMicrophone(deviceId: string): Promise<MicrophoneSettingsResult>;

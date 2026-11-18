@@ -10,10 +10,10 @@ import type {
 } from "../common/ipc";
 import {
   DEFAULT_NARRATION_LANGUAGE,
-  isNarrationLanguage,
+  isNarrationLanguagePreference,
   NARRATION_LANGUAGES,
   NARRATION_MODEL_DOWNLOAD_LABEL,
-  type NarrationLanguage,
+  SYSTEM_NARRATION_LANGUAGE,
 } from "../common/narration";
 import { formatMs } from "./format";
 import { IMPORT_LIMITS } from "../common/import";
@@ -60,8 +60,6 @@ export function Recorder() {
   const [showRecordingWarning, setShowRecordingWarning] = useState(false);
   const [warningStarting, setWarningStarting] = useState(false);
   const [showNarrationSettings, setShowNarrationSettings] = useState(false);
-  const [narrationLanguage, setSelectedNarrationLanguage] =
-    useState<NarrationLanguage>(DEFAULT_NARRATION_LANGUAGE);
   const [sensitive, setSensitive] = useState<SensitiveModelStatus | null>(null);
   const [advancedPending, setAdvancedPending] = useState(false);
   const [microphonePending, setMicrophonePending] = useState(false);
@@ -85,7 +83,6 @@ export function Recorder() {
 
   const applyRecorderStatus = useCallback((next: RecorderStatus) => {
     setStatus(next);
-    setSelectedNarrationLanguage(next.narrationLanguage);
   }, []);
   useEffect(() => window.skillRecorder.onSessionsChanged(() => { void refreshCount(); }), [refreshCount]);
 
@@ -134,7 +131,10 @@ export function Recorder() {
   const justSaved = !recording && status?.lastFinish?.outcome === "saved";
   const justDiscarded = !recording && status?.lastFinish?.outcome === "discarded";
   const narrate = microphoneSettings?.narrationEnabled ?? false;
-  const narrationLanguageName = japaneseNarrationLanguage(narrationLanguage);
+  const narrationLanguagePreference = status?.narrationLanguagePreference ?? SYSTEM_NARRATION_LANGUAGE;
+  const narrationLanguageName = japaneseNarrationLanguage(status?.narrationLanguage ?? DEFAULT_NARRATION_LANGUAGE);
+  const defaultNarrationLanguageName = japaneseNarrationLanguage(status?.defaultNarrationLanguage ?? DEFAULT_NARRATION_LANGUAGE);
+  const defaultNarrationLanguageLabel = `既定（${defaultNarrationLanguageName}）`;
   const advancedOn = sensitive?.enabled ?? true;
   const selectedScreenLabel =
     japaneseDeviceLabel(japaneseMessage(screenSettings?.selectedSourceLabel) || "画面を読み込み中…");
@@ -260,11 +260,10 @@ export function Recorder() {
 
   const selectNarrationLanguage = useCallback(
     async (value: string) => {
-      if (!isNarrationLanguage(value)) {
+      if (!isNarrationLanguagePreference(value)) {
         window.alert("この言語の文字起こしには対応していません。");
         return;
       }
-      setSelectedNarrationLanguage(value);
       const result = await window.skillRecorder.setNarrationLanguage(value);
       if (!result.ok) window.alert(japaneseMessage(result.error) || "文字起こしの言語を変更できませんでした。");
       applyRecorderStatus(await window.skillRecorder.status());
@@ -462,7 +461,9 @@ export function Recorder() {
                         ? `音声を収録中 · ${narrationLanguageName}`
                         : "この録画の音声解説はオフ"
                       : narrate
-                        ? narrationLanguageName
+                        ? narrationLanguagePreference === SYSTEM_NARRATION_LANGUAGE
+                          ? defaultNarrationLanguageLabel
+                          : narrationLanguageName
                         : "操作を声で説明する（任意）"}
               </span>
             </span>
@@ -520,13 +521,14 @@ export function Recorder() {
             <div className="narrate-select-wrap">
               <select
                 id="narrate-language"
-                value={narrationLanguage}
+                value={narrationLanguagePreference}
                 disabled={microphonePending || recording || transitioning}
                 onChange={(event) =>
                   void selectNarrationLanguage(event.currentTarget.value)
                 }
                 title="選択した言語のまま文字起こしします"
               >
+                <option value={SYSTEM_NARRATION_LANGUAGE}>{defaultNarrationLanguageLabel}</option>
                 {NARRATION_LANGUAGES.map(({ code }) => (
                   <option key={code} value={code}>
                     {japaneseNarrationLanguage(code)}

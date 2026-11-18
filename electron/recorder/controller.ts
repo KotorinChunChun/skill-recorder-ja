@@ -18,7 +18,10 @@ import type {
 import {
   DEFAULT_NARRATION_LANGUAGE,
   isNarrationLanguage,
+  isNarrationLanguagePreference,
+  SYSTEM_NARRATION_LANGUAGE,
   type NarrationLanguage,
+  type NarrationLanguagePreference,
 } from "../../common/narration";
 import type { RecorderState, SessionMeta } from "../../common/types";
 import {
@@ -68,6 +71,9 @@ export interface AudioCaptureEnded {
 }
 
 export interface RecorderDeps {
+  defaultNarrationLanguage?: () => NarrationLanguage;
+  initialNarrationLanguagePreference?: NarrationLanguagePreference;
+  saveNarrationLanguagePreference?: (preference: NarrationLanguagePreference) => Promise<void>;
   /** Resolves the capture config in effect for the next session. */
   resolveConfig: () => CaptureConfig;
   /** Builds the collectors enabled by a config. */
@@ -104,7 +110,7 @@ export class RecorderController {
   private video: SessionVideoRecorder | null = null;
   private audio: SessionAudioRecorder | null = null;
   private transition: RecorderStatus["transition"] = "none";
-  private narrationLanguage = DEFAULT_NARRATION_LANGUAGE;
+  private narrationLanguagePreference: NarrationLanguagePreference;
   private microphone: RecorderStatus["microphone"] = {
     state: "off",
     error: null,
@@ -118,6 +124,7 @@ export class RecorderController {
   private lastProcessed = false;
 
   constructor(private readonly deps: RecorderDeps) {
+    this.narrationLanguagePreference = deps.initialNarrationLanguagePreference ?? SYSTEM_NARRATION_LANGUAGE;
     this.host = new CollectorHost(this.bus);
     // Every persisted event refreshes live status (event count, etc.).
     this.bus.subscribe(() => this.emit());
@@ -125,6 +132,16 @@ export class RecorderController {
 
   get state(): RecorderState {
     return this.store ? "recording" : "idle";
+  }
+
+  private get defaultNarrationLanguage(): NarrationLanguage {
+    return this.deps.defaultNarrationLanguage?.() ?? DEFAULT_NARRATION_LANGUAGE;
+  }
+
+  private get narrationLanguage(): NarrationLanguage {
+    return this.narrationLanguagePreference === SYSTEM_NARRATION_LANGUAGE
+      ? this.defaultNarrationLanguage
+      : this.narrationLanguagePreference;
   }
 
   /** The last completed session's directory, if any (for analysis). */
@@ -168,6 +185,8 @@ export class RecorderController {
       sessionId: this.store?.meta.id ?? null,
       startedAt: this.store?.meta.startedAt ?? null,
       narrationLanguage: this.narrationLanguage,
+      narrationLanguagePreference: this.narrationLanguagePreference,
+      defaultNarrationLanguage: this.defaultNarrationLanguage,
       eventCount: this.store?.eventCount ?? 0,
       transition: this.transition,
       microphone: {
@@ -268,7 +287,7 @@ export class RecorderController {
     });
   }
 
-  setNarrationLanguage(language: NarrationLanguage): Promise<NarrationLanguageResult> {
+  setNarrationLanguage(preference: NarrationLanguagePreference): Promise<NarrationLanguageResult> {
     return this.enqueue(async () => {
       if (this.store || this.transition !== "none") {
         return {
@@ -276,12 +295,18 @@ export class RecorderController {
           error: "Narration language cannot change while recording.",
         };
       }
-      if (!isNarrationLanguage(language)) {
+      if (!isNarrationLanguagePreference(preference)) {
         return { ok: false, error: "Unsupported narration language." };
       }
-      this.narrationLanguage = language;
+      try {
+        await this.deps.saveNarrationLanguagePreference?.(preference);
+      } catch (error) {
+        log.warn("Could not save narration preference:", error);
+        return { ok: false, error: "Could not save the narration language preference." };
+      }
+      this.narrationLanguagePreference = preference;
       this.emit();
-      return { ok: true, language };
+      return { ok: true, language: this.narrationLanguage };
     });
   }
 
@@ -314,7 +339,7 @@ export class RecorderController {
       return { ok: false, error: "Unsupported narration language." };
     }
     if (options?.narrationLanguage !== undefined) {
-      this.narrationLanguage = options.narrationLanguage;
+      this.narrationLanguagePreference = options.narrationLanguage;
     }
 
     this.transition = "starting";

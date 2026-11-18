@@ -12,6 +12,7 @@ const messages = new Map<string, string>([
   ["Microphone controls are only available while recording.", "マイクは録画中に操作できます。"],
   ["Narration language cannot change while recording.", "文字起こしの言語は録画を終了してから変更してください。"],
   ["Unsupported narration language.", "この言語の文字起こしには対応していません。"],
+  ["Could not save the narration language preference.", "文字起こしの言語設定を保存できませんでした。"],
   ["Invalid narration preference.", "音声解説の設定が無効です。"],
   ["Choose the next recording's narration state after this recording ends.", "次の録画の音声設定は、現在の録画を終了してから変更してください。"],
   ["Choose the next recording's screen after this recording ends.", "次に録画する画面は、現在の録画を終了してから選んでください。"],

@@ -12,6 +12,7 @@ import path from "node:path";
 
 import { FULL_CAPTURE } from "../common/config";
 import { IPC, type RecorderStatus, type StartResult } from "../common/ipc";
+import { DEFAULT_NARRATION_LANGUAGE, resolveSystemNarrationLanguage } from "../common/narration";
 import type {
   SupportedShellId,
   TerminalActionResult,
@@ -28,6 +29,7 @@ import { createLogger } from "./logger";
 import { NarrationManager } from "./narration/manager";
 import { SensitiveModelManager } from "./sensitive/model-manager";
 import { RecorderController } from "./recorder/controller";
+import { loadNarrationPreference, saveNarrationPreference } from "./recorder/narration-preference";
 import { RecordingPrivacySession } from "./recording-privacy";
 import { deleteSession } from "./sessions";
 import { registerSingleInstance } from "./single-instance";
@@ -89,7 +91,9 @@ let quitReady = false;
 let quitTask: Promise<void> | null = null;
 let recordingStartPending = false;
 let pendingLibrarySelection: string | null = null;
-const imports = new ImportManager();
+let defaultNarrationLanguage = DEFAULT_NARRATION_LANGUAGE;
+const narrationPreferenceFile = path.join(profile, "narration-language.json");
+const imports = new ImportManager(() => defaultNarrationLanguage);
 const recordingPrivacy = new RecordingPrivacySession();
 const narration = new NarrationManager((status) =>
   broadcast(IPC.narrationStatusChanged, status),
@@ -124,6 +128,9 @@ async function finishRecordedTerminal(): Promise<void> {
 }
 
 const recorder = new RecorderController({
+  defaultNarrationLanguage: () => defaultNarrationLanguage,
+  initialNarrationLanguagePreference: loadNarrationPreference(narrationPreferenceFile),
+  saveNarrationLanguagePreference: (preference) => saveNarrationPreference(narrationPreferenceFile, preference),
   resolveConfig: () => ({ ...FULL_CAPTURE }),
   buildCollectors: createCollectors,
   createVideoRecorder: () => new VideoRecorder(),
@@ -383,6 +390,7 @@ function clampControlsToDisplay(): void {
 }
 
 app.whenReady().then(async () => {
+  defaultNarrationLanguage = resolveSystemNarrationLanguage(app.getPreferredSystemLanguages());
   if (process.platform === "win32") Menu.setApplicationMenu(null);
   if (dock && app.dock) app.dock.setIcon(dock);
 

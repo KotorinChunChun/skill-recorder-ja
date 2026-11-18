@@ -10,7 +10,7 @@ import { app } from "electron";
 import { buildBundle } from "../../common/bundle";
 import { AUDIO_MANIFEST_VERSION } from "../../common/audio";
 import { IMPORT_FILE, IMPORT_LIMITS, IMPORT_LIMIT_LABEL, ImportDetailsSchema, type ImportMetadata } from "../../common/import";
-import { DEFAULT_NARRATION_LANGUAGE, NARRATION_FILE } from "../../common/narration";
+import { DEFAULT_NARRATION_LANGUAGE, NARRATION_FILE, type NarrationLanguage } from "../../common/narration";
 import type { SessionMeta } from "../../common/types";
 import { sessionDir, sessionsRoot } from "../recorder/session-store";
 import { ImportMedia } from "./media";
@@ -21,6 +21,8 @@ import { inspectImportTracks } from "./tracks";
 export class ImportManager {
   private readonly jobs = new Map<string, AbortController>();
   private settled: Promise<void> = Promise.resolve();
+
+  constructor(private readonly defaultNarrationLanguage: () => NarrationLanguage = () => DEFAULT_NARRATION_LANGUAGE) {}
 
   isBusy(id: string): boolean { return this.jobs.has(id); }
   cancel(id: string): void { this.jobs.get(id)?.abort(); }
@@ -75,7 +77,7 @@ export class ImportManager {
       const importedAt = Date.now();
       const imported: ImportMetadata = {
         version: 1, file: name, name: path.basename(file), importedAt, bytes: copied.size,
-        ...properties, hasAudio, details: "", language: DEFAULT_NARRATION_LANGUAGE,
+        ...properties, hasAudio, details: "", language: this.defaultNarrationLanguage(),
       };
       const meta: SessionMeta = {
         id, startedAt: importedAt, stoppedAt: importedAt + imported.durationMs,

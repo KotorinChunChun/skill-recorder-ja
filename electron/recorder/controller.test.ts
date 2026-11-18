@@ -5,9 +5,10 @@ import path from "node:path";
 import test from "node:test";
 
 import { FULL_CAPTURE } from "../../common/config";
-import type { NarrationLanguage } from "../../common/narration";
+import { SYSTEM_NARRATION_LANGUAGE, type NarrationLanguage } from "../../common/narration";
 import type { MicrophoneDevice } from "../../common/microphone";
 import { RecorderController, type SessionAudioRecorder } from "./controller";
+import { loadNarrationPreference, saveNarrationPreference } from "./narration-preference";
 
 class FakeAudioRecorder implements SessionAudioRecorder {
   readonly calls: string[] = [];
@@ -130,20 +131,28 @@ test("selected screen source is passed to the video recorder", async () => {
   });
 });
 
-test("preferred narration language is reused by optionless recording starts", async () => {
-  await withSessionsRoot(async () => {
+test("recording uses a saved override or the system language when reset", async () => {
+  await withSessionsRoot(async (root) => {
     const audio = new FakeAudioRecorder();
+    const file = path.join(root, "narration-language.json");
     const controller = new RecorderController({
       resolveConfig: () => ({ ...FULL_CAPTURE, video: false }),
       buildCollectors: () => [],
       createAudioRecorder: () => audio,
       deleteSession: async () => undefined,
+      defaultNarrationLanguage: () => "ja",
+      initialNarrationLanguagePreference: loadNarrationPreference(file),
+      saveNarrationLanguagePreference: (preference) => saveNarrationPreference(file, preference),
     });
 
+    assert.equal(controller.status().narrationLanguage, "ja");
+    assert.equal(controller.status().narrationLanguagePreference, SYSTEM_NARRATION_LANGUAGE);
     assert.deepEqual(await controller.setNarrationLanguage("it"), {
       ok: true,
       language: "it",
     });
+    assert.equal(loadNarrationPreference(file), "it");
+    assert.equal(controller.status().defaultNarrationLanguage, "ja");
     const started = await controller.start({ narration: true });
     assert.equal(started.ok, true);
     assert.equal(audio.narrationLanguage, "it");
@@ -151,6 +160,16 @@ test("preferred narration language is reused by optionless recording starts", as
     const changeWhileRecording = await controller.setNarrationLanguage("fr");
     assert.equal(changeWhileRecording.ok, false);
     assert.match(changeWhileRecording.error ?? "", /cannot change while recording/i);
+    assert.equal(loadNarrationPreference(file), "it");
+    assert.equal((await controller.stop()).ok, true);
+
+    assert.deepEqual(await controller.setNarrationLanguage(SYSTEM_NARRATION_LANGUAGE), {
+      ok: true,
+      language: "ja",
+    });
+    assert.equal(loadNarrationPreference(file), SYSTEM_NARRATION_LANGUAGE);
+    assert.equal((await controller.start({ narration: true })).ok, true);
+    assert.equal(audio.narrationLanguage, "ja");
     assert.equal((await controller.stop()).ok, true);
   });
 });

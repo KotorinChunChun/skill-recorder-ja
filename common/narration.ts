@@ -103,6 +103,8 @@ export const NARRATION_LANGUAGES = [
 export type NarrationLanguage = (typeof NARRATION_LANGUAGES)[number]["code"];
 
 export const DEFAULT_NARRATION_LANGUAGE: NarrationLanguage = "en";
+export const SYSTEM_NARRATION_LANGUAGE = "system";
+export type NarrationLanguagePreference = NarrationLanguage | typeof SYSTEM_NARRATION_LANGUAGE;
 
 /** Current q8 model files total 251,875,316 bytes at the publisher. */
 export const NARRATION_MODEL_DOWNLOAD_LABEL = "~252 MB";
@@ -112,6 +114,29 @@ export function isNarrationLanguage(value: unknown): value is NarrationLanguage 
     typeof value === "string" &&
     NARRATION_LANGUAGES.some(({ code }) => code === value)
   );
+}
+
+export function isNarrationLanguagePreference(value: unknown): value is NarrationLanguagePreference {
+  return value === SYSTEM_NARRATION_LANGUAGE || isNarrationLanguage(value);
+}
+
+export function resolveSystemNarrationLanguage(locales: readonly string[]): NarrationLanguage {
+  const whisperAliases: Readonly<Record<string, NarrationLanguage>> = {
+    fil: "tl",
+    jv: "jw",
+    nb: "no",
+  };
+  for (const locale of locales) {
+    let language: string;
+    try {
+      language = new Intl.Locale(locale.trim().replaceAll("_", "-")).language;
+    } catch {
+      continue;
+    }
+    const supported = whisperAliases[language] ?? language;
+    if (isNarrationLanguage(supported)) return supported;
+  }
+  return DEFAULT_NARRATION_LANGUAGE;
 }
 
 export function narrationLanguageLabel(language: NarrationLanguage): string {
