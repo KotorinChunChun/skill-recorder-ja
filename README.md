@@ -1,5 +1,30 @@
 # Skill Recorder
 
+## 日本語版
+
+[Microsoft の Skill Recorder v0.9.2](https://github.com/microsoft/skill-recorder/releases/tag/v0.9.2) をベースにした個人フォークです。元のコミットは [63bbb50](https://github.com/microsoft/skill-recorder/commit/63bbb50111713b02f3bc0ebbd5f354f4eb038f99) です。
+
+- 録画、セッション一覧、解析、スキルと自動化の作成画面を日本語化しました。
+- 文字起こしの既定値は OS の優先言語に従います。日本語環境では「既定（日本語）」と表示されます。
+- 解析時に選んだ言語でセッション名、目的、操作手順を生成します。すでに解析した録画は、再解析で言語を選び直せます。
+
+### Windows でソースから起動
+
+Node.js 24.19 以降の 24 系と npm 11.17 以降を使います。PowerShell 7 で次のコマンドを実行してください。
+
+~~~powershell
+git clone --branch ja/v0.9.2 https://github.com/KotorinChunChun/skill-recorder-ja.git
+Set-Location skill-recorder-ja
+npm run check:lockfile
+npm ci --ignore-scripts=false --dangerously-allow-all-scripts=false --strict-allow-scripts
+npm run electron:install-reviewed
+npm run compliance:licenses
+npm run build
+npm start
+~~~
+
+導入の詳細は [公式のソースビルド手順](https://github.com/microsoft/skill-recorder/blob/63bbb50111713b02f3bc0ebbd5f354f4eb038f99/INSTALL.md#manual-developer-setup) を参照してください。ライセンスと依存関係の注意事項は [LICENSE](LICENSE) と [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) にあります。
+
 **Record yourself doing a task once, then turn it into a skill your AI agent can repeat.**
 
 > [!TIP]
