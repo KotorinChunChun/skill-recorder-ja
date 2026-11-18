@@ -1016,13 +1016,13 @@ test("source and release instructions remain compliance-preserving", async () =>
   );
   assert.doesNotMatch(unixInstaller, /\/(?:master|main)\/install\.sh/i);
 
-  assert.match(instructions, /generated build is for local execution only/i);
+  assert.match(instructions, /この手順で作成したビルドはローカル実行専用です/);
   assert.match(instructions, /npm ci/);
-  assert.match(instructions, /full 40-character commit SHA/i);
+  assert.match(instructions, /40文字の完全なコミット SHA/);
   assert.match(instructions, /npm 11\.17/i);
   assert.match(instructions, /macOS/);
   assert.match(instructions, /Ubuntu/);
-  assert.match(instructions, /complete generated\s+compliance bundle/i);
+  assert.match(instructions, /生成された完全なコンプライアンス一式/);
   assert.doesNotMatch(instructions, /raw\.githubusercontent\.com\/[^ \n]+\/(?:master|main)\//i);
   assert.match(electronInstaller, /createHash\("sha256"\)/);
   assert.match(electronInstaller, /@electron-internal\/extract-zip/);
@@ -1046,16 +1046,16 @@ test("source and release instructions remain compliance-preserving", async () =>
   assert.match(readme, /\[`INSTALL\.md`\]\(INSTALL\.md\)/);
   assert.match(readme, /\[`RELEASING\.md`\]\(RELEASING\.md\)/);
   assert.doesNotMatch(readme, /raw\.githubusercontent\.com\/[^ \n]+\/(?:master|main)\//i);
-  assert.match(releasing, /source-only releases.*are the default/i);
+  assert.match(releasing, /既定はソースのみのリリースです/);
   assert.match(releasing, /npm version 0\.2\.0 --no-git-tag-version/);
-  assert.match(releasing, /full release commit SHA/i);
+  assert.match(releasing, /完全なリリースコミット SHA/);
   assert.match(releasing, /git",\["cat-file","blob"/);
-  assert.match(releasing, /not working-tree\s+files/i);
-  assert.match(releasing, /SHA-256 values for `install\.ps1` and `install\.sh`/i);
-  assert.match(releasing, /complete, version-matched\s+compliance bundle/i);
+  assert.match(releasing, /作業ツリーのファイルを使わず、対象コミットの Git blob/);
+  assert.match(releasing, /`install\.ps1` と `install\.sh` の SHA-256/);
+  assert.match(releasing, /バイナリと版が一致するコンプライアンス資料一式/);
   assert.match(releasing, /Tesseract\.js-core/);
-  assert.match(instructions, /Tesseract WebAssembly component notices/);
-  assert.match(releasing, /Never silently replace an asset or move a release tag/i);
+  assert.match(instructions, /Tesseract の WebAssembly コンポーネントの表示/);
+  assert.match(releasing, /告知せずに成果物を差し替えたり、公開済みのリリースタグを移動したりしない/);
   assert.match(
     windowsWorkflow,
     /- name: Test commit-pinned source installation\r?\n\s+shell: powershell/,

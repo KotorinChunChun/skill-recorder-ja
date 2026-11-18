@@ -1,38 +1,35 @@
-# Releasing Skill Recorder
+# Skill Recorder のリリース手順
 
-Skill Recorder uses semantic versions and two distinct release channels:
+この文書は Microsoft 公式版のリリース手順です。日本語フォークをソースから起動する手順は [README](README.md#日本語版) にあります。
 
-1. **Source-only releases** are the default. GitHub publishes the tagged
-   repository source, and users build an exact commit locally with the
-   commit-pinned installers.
-2. **Binary releases** are optional. They must be built with the repository's
-   `npm run dist*` commands and accompanied by the complete, version-matched
-   compliance bundle.
+バージョンはセマンティック バージョニングに従います。
 
-Never attach `dist/`, `dist-electron/`, `node_modules/`, or an application
-assembled by `install.ps1` or `install.sh` to a release.
+1. 既定はソースのみのリリースです。GitHub はタグが指すソースを公開し、利用者はインストーラーでコミットを固定して端末上でビルドします。
+2. バイナリのリリースは任意です。`npm run dist*` で生成し、バイナリと版が一致するコンプライアンス資料一式を添付します。
 
-## 1. Prepare a release pull request
+`dist/`、`dist-electron/`、`node_modules/` や `install.ps1`・`install.sh` が端末上で組み立てたアプリは、リリースに添付しないでください。
 
-Start from the latest `main` and choose the next semantic version:
+<a id="1-prepare-a-release-pull-request"></a>
 
-- patch (`0.1.1`) for compatible fixes;
-- minor (`0.2.0`) for compatible functionality;
-- major (`1.0.0`) for incompatible behavior after the project reaches 1.0.
+## 1. リリース用の Pull Request を準備する
 
-Update both `package.json` and `package-lock.json` without creating a tag:
+最新の `main` を起点に次のバージョンを決めます。
+
+- 互換性を保つ修正はパッチ（`0.1.1`）
+- 互換性を保つ機能追加はマイナー（`0.2.0`）
+- 1.0 以降の非互換変更はメジャー（`1.0.0`）
+
+タグを作らずに `package.json` と `package-lock.json` を更新します。
 
 ```sh
 npm version 0.2.0 --no-git-tag-version
 ```
 
-Replace `0.2.0` with the chosen version. Summarize user-visible changes in the
-pull request. If dependencies or bundled assets changed, perform the review
-below before updating any compliance policy hash.
+`0.2.0` はリリースする版に置き換えてください。Pull Request に利用者に影響する変更を書きます。依存関係や同梱素材の変更は、コンプライアンス ポリシーのハッシュを更新する前に確認してください。
 
-### Dependency and asset review
+<a id="dependency-and-asset-review"></a>
 
-Run:
+### 依存関係と素材の確認
 
 ```sh
 npm run fix:lockfile-registry
@@ -41,46 +38,32 @@ npm ci --ignore-scripts=false --dangerously-allow-all-scripts=false --strict-all
 npm run compliance:licenses
 ```
 
-Inspect:
+次の資料と変更を確認します。
 
-- `.compliance/LICENSE-INVENTORY.json`;
-- `.compliance/THIRD-PARTY-LICENSES.txt`;
-- `THIRD-PARTY-NOTICES.md`;
-- changes to `package-lock.json`;
-- the exact-version approvals and explicit denials in `package.json#allowScripts`;
-- every new or changed image, font, model, native library, executable, and
-  copied source file.
+- `.compliance/LICENSE-INVENTORY.json`、`.compliance/THIRD-PARTY-LICENSES.txt`、`THIRD-PARTY-NOTICES.md`
+- `package-lock.json` の差分と、`package.json#allowScripts` のバージョンごとの許可・拒否
+- 追加・変更した画像、フォント、モデル、ネイティブライブラリ、実行ファイル、コピーしたソース
 
-The committed lockfile must use canonical `registry.npmjs.org` resolved URLs.
-Microsoft contributors may fetch through a configured internal mirror, but
-internal feed URLs must never be committed to the lockfile or contributor
-configuration. The Windows installer's narrowly gated Microsoft recovery endpoint
-is an explicitly approved exception in implementation code only; do not copy it
-into README examples or installation commands. Review every new dependency install
-script before adding an exact-version approval; explicitly deny scripts that
-are not required.
+lockfile には正規の `registry.npmjs.org` の URL を記録します。Microsoft の開発者が設定済みの社内ミラーを使う場合も、社内フィードの URL を lockfile や開発者向け設定にコミットしないでください。Windows インストーラーで条件を限定して使う Microsoft 向けの再取得先は実装コード内の例外です。README や導入コマンドへ転記しないでください。新しい依存関係にインストールスクリプトがある場合は、正確な版を確認して必要なものを許可し、不要なものを拒否します。
 
-The compliance scripts intentionally reject unreviewed component versions and
-materials. Do not fix such a failure by blindly replacing a version or hash.
-Review the new license, notices, redistribution terms, corresponding-source
-requirements, and upstream provenance first.
+コンプライアンス処理は未確認の版や資料を拒否します。エラーの解消には、先に入手元、ライセンス、表示、再配布条件、対応ソースコードの要件を確認してください。
 
-| Change | Required review |
+| 変更 | 必要な確認 |
 | --- | --- |
-| GitHub Copilot SDK or CLI | Re-read that exact version's terms and notices; confirm unmodified bundling remains permitted; update the reviewed policy version. |
-| Electron or Chromium | Review the Electron archive and checksums, Chromium notices, FFmpeg revision/source/patches, and every supported platform hash. |
-| Sharp or sharp-libvips | Review package licenses, native dependency versions, build repositories, patches, source archives, and relinking instructions. |
-| ONNX Runtime | Review the exact release/development revision, license, notices, native packages, and source reference. |
-| Tesseract.js, Tesseract.js-core, or tessdata | Review the exact npm versions, WASM build commit and submodules, embedded-library notices, language-data commit/hash, and fixed source archives. |
-| Artistic-2.0 package | Retain the package notice and complete Artistic-2.0 text; include valid source instructions or the exact Standard Version source. |
-| New native or copyleft component | Add exact notices, canonical license text, complete corresponding source, build scripts/patches, and relinking instructions where required. |
-| Font, image, model, recording, or other asset | Record its provenance and written redistribution authorization; do not assume application code licenses cover assets. |
+| GitHub Copilot SDK または CLI | 対象版の条件と表示、改変しない形での同梱が可能か、確認済みポリシーの版 |
+| Electron または Chromium | アーカイブとチェックサム、Chromium の表示、FFmpeg のコミット・ソース・パッチ、対応環境ごとのハッシュ |
+| Sharp または sharp-libvips | パッケージのライセンス、ネイティブ依存関係、ビルド元のリポジトリ、パッチ、ソースアーカイブ、再リンク手順 |
+| ONNX Runtime | 正確なリリースまたは開発リビジョン、ライセンスと表示、ネイティブパッケージとソースの参照 |
+| Tesseract.js、Tesseract.js-core、tessdata | npm の版、WASM のビルドコミットとサブモジュール、埋め込みライブラリの表示、言語データのコミットとハッシュ、固定したソースアーカイブ |
+| Artistic-2.0 のパッケージ | パッケージの表示とライセンス全文、ソース取得手順または正確な Standard Version のソース |
+| 新規のネイティブまたはコピーレフト コンポーネント | 正確な表示、ライセンス原文、完全な対応ソースコード、必要なビルドスクリプト・パッチ・再リンク手順 |
+| フォント、画像、モデル、録画などの素材 | 入手元と書面の再配布許可。アプリのコードと別に確認 |
 
-If a new obligation cannot be met, do not merge or release the dependency.
+新しい義務を満たせない依存関係は、マージやリリースの対象から外します。
 
-## 2. Validate the release candidate
+<a id="2-validate-the-release-candidate"></a>
 
-Run the existing checks:
+## 2. リリース候補を検証する
 
 ```sh
 npm test
@@ -89,26 +72,19 @@ npm run typecheck:evals
 npm run compliance:licenses
 ```
 
-For a binary candidate, also generate the full bundle:
+バイナリを配布する場合は完全なコンプライアンス資料も生成します。
 
 ```sh
 npm run compliance:prepare
 ```
 
-The pull request must pass:
+Pull Request では、Windows x64 と ARM64 のライセンス、テスト、ビルド、パッケージ、アーキテクチャ、macOS の対応ソースコードの準備、テストとビルド、Ubuntu のライセンス、テストとビルドが必要です。Windows、macOS、Ubuntu でコミットを固定したソースインストーラーも検証します。コンプライアンス検査をすべて通過してから公開してください。
 
-- Windows x64 and ARM64 license, test, build, package, and architecture checks;
-- macOS full corresponding-source preparation, test, and build checks;
-- Ubuntu license, test, and build checks;
-- commit-pinned source-installer checks on Windows, macOS, and Ubuntu.
+<a id="3-merge-and-freeze-the-release-commit"></a>
 
-Resolve every compliance failure. Never disable or bypass a compliance check to
-publish a release.
+## 3. マージしてコミットを確定する
 
-## 3. Merge and freeze the release commit
-
-Merge the release pull request into `main`, then wait for the workflows on
-the resulting `main` commit to pass. Record the exact commit:
+Pull Request を `main` にマージし、該当コミットのワークフローが成功するまで待ちます。正確なコミット SHA を記録します。
 
 ```sh
 git fetch origin main
@@ -116,10 +92,7 @@ release_commit="$(git rev-parse origin/main)"
 printf '%s\n' "$release_commit"
 ```
 
-The release tag and every installation command must identify this commit. Do
-not use a branch name or a mutable tag in an installer command.
-
-Create an annotated tag only after the commit passes:
+タグと導入コマンドは、このコミットを参照します。導入コマンドではブランチ名や移動可能なタグに置き換えないでください。検証後、注釈付きタグを作ります。
 
 ```sh
 version="v0.2.0"
@@ -127,40 +100,29 @@ git tag -a "$version" "$release_commit" -m "Skill Recorder $version"
 git push origin "$version"
 ```
 
-Do not move or reuse a published tag. Protect release tags in repository
-settings. If a release is defective, publish a new patch version.
+公開済みのタグを移動や再利用から保護してください。不具合がある場合は新しいパッチ版を公開します。
 
-## 4. Calculate installer-script hashes
+<a id="4-calculate-installer-script-hashes"></a>
 
-Calculate hashes from the exact release commit's Git blobs, not working-tree
-files. This avoids stale checkouts and local line-ending conversion. Replace
-the final argument with the full 40-character release commit SHA. The command
-works in PowerShell, macOS, and Ubuntu:
+## 4. インストーラーの SHA-256 を求める
+
+作業ツリーのファイルを使わず、対象コミットの Git blob からハッシュを計算します。これによりチェックアウトの古さと改行コードの変換の影響を避けられます。末尾の引数を40文字の完全なリリースコミット SHA に置き換えます。PowerShell、macOS、Ubuntu で実行できます。
 
 ```sh
 node -e 'const {execFileSync}=require("node:child_process");const {createHash}=require("node:crypto");const commit=process.argv[1];if(!/^[0-9a-f]{40}$/i.test(commit))throw new Error("full release commit SHA required");for(const file of ["install.ps1","install.sh"]){const data=execFileSync("git",["cat-file","blob",commit+":"+file]);console.log(createHash("sha256").update(data).digest("hex")+"  "+file)}' FULL_40_CHARACTER_RELEASE_COMMIT_SHA
 ```
 
-Publish both hashes in the GitHub Release notes. A user following the
-inspect-first instructions in `INSTALL.md` must be able to compare the
-downloaded script with these values.
+`install.ps1` と `install.sh` の SHA-256 を GitHub Release のノートに掲載します。[実行前にスクリプトを確認する手順](INSTALL.md#inspect-first-installation) で利用者が照合します。
 
-## 5. Publish the source-only GitHub Release
+<a id="5-publish-the-source-only-github-release"></a>
 
-Source-only is the recommended release format. Do not attach installers or
-portable binaries. GitHub's automatically generated archives contain the
-tagged repository source but not `node_modules` or downloaded runtimes.
+## 5. ソースのみの GitHub Release を公開する
 
-Release notes must include:
+ソースのみのリリースではインストーラーやポータブル版バイナリを添付しません。GitHub が生成するアーカイブにはタグが指すソースが入り、`node_modules` や取得済みのランタイムは含まれません。
 
-- version and full release commit SHA;
-- SHA-256 values for `install.ps1` and `install.sh`;
-- user-visible changes;
-- the commit-pinned Windows and macOS/Ubuntu commands from `INSTALL.md`;
-- a clear statement that the release is source-only;
-- important upgrade, security, or compatibility notes.
+ノートにはバージョン、完全なリリースコミット SHA、`install.ps1` と `install.sh` の SHA-256、利用者に影響する変更、[コミットを固定した導入コマンド](INSTALL.md#commit-pinned-one-line-installation)（Windows と macOS／Ubuntu）、ソースのみの配布であること、更新・セキュリティ・互換性に関する注意事項を掲載します。
 
-After preparing a notes file:
+ノートのファイルを準備してから公開します。一時ファイルのリリースノートはコミットしません。
 
 ```sh
 gh release create "v0.2.0" \
@@ -169,17 +131,13 @@ gh release create "v0.2.0" \
   --notes-file release-notes.txt
 ```
 
-Do not commit the temporary release-notes file.
+<a id="6-optional-binary-release"></a>
 
-## 6. Optional binary release
+## 6. バイナリを公開する場合
 
-Binary publication is a separate decision. The supported release targets are
-**Windows x64**, **Windows ARM64**, and **macOS arm64**; every other platform,
-including Linux and macOS x64, is a source install (see `INSTALL.md`). The
-compliance tooling refuses to prepare a redistributable bundle on an
-unsupported target.
+対象は Windows x64、Windows ARM64、macOS arm64 です。Linux と macOS x64 を含むその他の環境は [ソース導入](INSTALL.md) を使います。コンプライアンス処理は非対応環境で配布用の資料を生成しません。
 
-Build each artifact on its native operating system and architecture:
+対象 OS と CPU のネイティブ環境で、該当するコマンドを選んで実行します。
 
 ```sh
 npm ci
@@ -190,50 +148,39 @@ npm run dist:portable:mac
 npm run dist:portable:win
 ```
 
-Run only the command applicable to that native machine. Outputs are written to
-`release/`. The build must complete the `afterPack` compliance gate.
+成果物は `release/` にできます。`afterPack` のコンプライアンス検査を通過し、公開前に次を確認してください。
 
-Before attaching a binary:
+1. タグのコミットと変更していない lockfile を使ってビルドしたこと。
+2. OS と CPU アーキテクチャが正しいこと。
+3. `resources/compliance/` に表示、ライセンス原文、対応ソースコード、パッチ、ハッシュ、再リンク手順がそろっていること。
+4. 生成した `.compliance` を個別の添付用アーカイブにまとめたこと。
+5. バイナリとコンプライアンス資料を同じリリースに添付すること。
+6. すべての添付ファイルの SHA-256 を公開すること。
+7. バイナリを公開している間はコンプライアンス資料を保持すること。
+8. 署名なし、アドホック署名、Authenticode、Developer ID のどの状態かを明記すること。
 
-1. Confirm it was built from the tagged commit with an unchanged lockfile.
-2. Verify its operating-system and CPU architecture.
-3. Confirm `resources/compliance/` contains exact notices, legal texts,
-   corresponding source, patches, hashes, and relinking instructions.
-4. Archive the generated `.compliance` directory as a separate companion asset.
-5. Attach the binary and its matching compliance archive to the same release.
-6. Publish SHA-256 values for every attached asset.
-7. Preserve the compliance archive for as long as the binary remains available.
-8. Disclose whether the binary is unsigned, ad-hoc signed, or Authenticode /
-   Developer ID signed.
+手動の **Portable builds** ワークフローは未署名のプレビューと対応資料を作ります。Actions の成果物を取得して確認し、必要な場合に GitHub Release として公開します。
 
-The manual **Portable builds** workflow produces unsigned preview artifacts and
-matching compliance artifacts. Download and verify them before deciding to
-publish them. An Actions artifact is not itself a GitHub Release.
+<a id="7-post-release-verification"></a>
 
-## 7. Post-release verification
+## 7. 公開後に検証する
 
-On clean supported machines:
+対応するクリーンな環境で確認します。
 
-1. Download each installer script by the full release commit SHA.
-2. Compare its SHA-256 with the release notes.
-3. Run with `SKILL_RECORDER_NO_LAUNCH=1` on macOS/Ubuntu. The Windows installer
-   never launches the app; verify its manual-launch completion notice instead.
-4. Confirm dependency installation and the platform license inventory succeed.
-5. Quit any running copies, launch Skill Recorder, and exercise recording,
-   analysis, and skill creation. Launch again while idle and while recording:
-   it should reveal the existing recorder or controls, not start another copy.
-6. Confirm update and uninstall instructions in `INSTALL.md`.
+1. 完全なリリースコミット SHA から各インストーラーを取得し、SHA-256 を公開ノートと照合する。
+2. macOS と Ubuntu は `SKILL_RECORDER_NO_LAUNCH=1` で導入する。Windows は自動起動しないため、手動起動の完了案内を確認する。
+3. 依存関係の導入と対象環境のライセンス一覧の生成が成功することを確認する。
+4. 起動中の版を終了し、録画、解析、スキルの作成を確認する。待機中と録画中にも再度起動し、既存の録画画面か録画操作バーが表示されることを確認する。
+5. [更新とアンインストール](INSTALL.md#updating-and-uninstalling) が機能することを確認する。
 
-Check that the GitHub Release tag still resolves to the recorded commit and
-that all source archives, hashes, notes, and optional compliance assets remain
-available.
+GitHub Release のタグが記録したコミットを指し、ソースアーカイブ、ハッシュ、ノート、公開したコンプライアンス資料を入手できることも確認します。
 
-## 8. Correcting a published release
+<a id="8-correcting-a-published-release"></a>
 
-Never silently replace an asset or move a release tag.
+## 8. 公開済みのリリースを訂正する
 
-- For incorrect notes, edit the notes and document the correction.
-- For a defective script, dependency, compliance bundle, or binary, mark the
-  affected release as unsuitable and publish a new patch release.
-- If an asset creates a legal or security risk, remove the affected binary,
-  retain an audit record, and publish corrected materials under a new version.
+告知せずに成果物を差し替えたり、公開済みのリリースタグを移動したりしないでください。
+
+- リリースノートの誤りは、本文を修正し、訂正内容を記録する。
+- スクリプト、依存関係、コンプライアンス資料、バイナリに不備がある場合は、その版を利用不適と明記し、新しいパッチ版を公開する。
+- 添付ファイルに法的またはセキュリティ上の問題がある場合は、該当バイナリを取り下げ、記録を残し、修正版を新しいバージョンで公開する。

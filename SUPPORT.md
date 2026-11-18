@@ -1,25 +1,13 @@
-# TODO: The maintainer of this repo has not yet edited this file
+# サポート
 
-**REPO OWNER**: Do you want Customer Service & Support (CSS) support for this product/project?
+<a id="how-to-file-issues-and-get-help"></a>
 
-- **No CSS support:** Fill out this template with information about how to file issues and get help.
-- **Yes CSS support:** Fill out an intake form at [aka.ms/onboardsupport](https://aka.ms/onboardsupport). CSS will work with/help you to determine next steps.
-- **Not sure?** Fill out an intake as though the answer were "Yes". CSS will help you decide.
+## 不具合や機能要望の報告
 
-*Then remove this first heading from this SUPPORT.MD file before publishing your repo.*
+Microsoft 公式版の不具合と機能要望は [microsoft/skill-recorder の GitHub Issues](https://github.com/microsoft/skill-recorder/issues) で管理されています。投稿前に同じ内容の Issue がないか検索してください。脆弱性の報告は [セキュリティ窓口](SECURITY.md) を確認してください。
 
-# Support
+<a id="microsoft-support-policy"></a>
 
-## How to file issues and get help  
+## Microsoft のサポート方針
 
-This project uses GitHub Issues to track bugs and feature requests. Please search the existing 
-issues before filing new issues to avoid duplicates.  For new issues, file your bug or 
-feature request as a new Issue.
-
-For help and questions about using this project, please **REPO MAINTAINER: INSERT INSTRUCTIONS HERE 
-FOR HOW TO ENGAGE REPO OWNERS OR COMMUNITY FOR HELP. COULD BE A STACK OVERFLOW TAG OR OTHER
-CHANNEL. WHERE WILL YOU HELP PEOPLE?**.
-
-## Microsoft Support Policy  
-
-Support for this **PROJECT or PRODUCT** is limited to the resources listed above.
+公式リポジトリの案内では、このプロジェクトのサポートは案内された窓口に限られます。利用方法の質問を受け付ける専用窓口は元の文書でも未記載です。

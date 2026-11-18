@@ -1,22 +1,16 @@
-# Skill Recorder — Evals
+# Skill Recorder の評価
 
-Repeatable evals for the part of the system with real variance: the multi-turn
-**Copilot describer** that turns captured signals into an *overall intent* + an
-*ordered list of steps*. Each eval feeds the describer a fixed, synthetic
-recording and scores its analysis against a rubric.
+GitHub Copilot の解析エージェントは、録画から作業の目的と順序付きの手順を推定します。この評価は、固定した合成録画を入力し、結果を評価基準と照合して、変動しやすい解析の品質を確認するためのものです。
 
-## Why fixture-based (not live capture)
+<a id="why-fixture-based-not-live-capture"></a>
 
-The evals are **deterministic and video-less on purpose**. Live capture (driving
-real apps, recording the screen) is flaky and slow, and it's not the part we're
-trying to measure. By materializing a fixed event stream we isolate the describer
-so a run is repeatable and fast (~15–25s per scenario), and a failure points at
-the model/instructions, not at capture flakiness. The events are authored to
-mirror what the real collectors emit for the same task, so a scenario is a
-faithful stand-in for a real recording. Matching **mock pages** live in
-`evals/mocks/` for when you *do* want a real end-to-end capture (see below).
+## 合成データを使う理由
 
-## Run
+実際のアプリと画面収録は、速度や環境によって結果が変わります。固定したイベント列で解析部分を切り出すと、1シナリオ約15～25秒で再実行でき、失敗をモデルや指示文の問題に絞れます。イベントは同じ作業をしたときに実際の収集処理が出力する形に合わせています。映像は使いません。実録画で端から端まで試せるよう、対応する [モックページ](#mock-pages-evalsmocks) も用意しています。
+
+<a id="run"></a>
+
+## 実行
 
 ```bash
 npm run eval                       # all scenarios
@@ -27,93 +21,68 @@ npm run eval -- --keep             # print the temp sessions dir (artifacts kept
 npm run eval -- --model=<model-id> # override the describer model
 ```
 
-Requires GitHub Copilot CLI to be signed in (same auth the app uses). Exit code
-is non-zero if any scenario fails. Full results are written to
-`evals/results/<timestamp>.json` (git-ignored).
+アプリと同じ認証を使うため、GitHub Copilot CLI へのサインインが必要です。シナリオが1つでも失敗すると終了コードは 0 以外になります。結果の詳細は Git 管理外の `evals/results/<timestamp>.json` に出力します。
 
-Under the hood the runner uses Node's TypeScript support
-(`--experimental-transform-types`) plus a tiny resolution hook
-(`evals/register.mjs` → `evals/hooks.mjs`) that (1) resolves the project's
-extensionless imports to `.ts` and (2) swaps the one `electron` import for a
-headless stub (`evals/electron-stub.mjs`). No bundler, runs the real app source.
+ランナーは Node.js の TypeScript 対応（`--experimental-transform-types`）と解決フック（`evals/register.mjs` → `evals/hooks.mjs`）を使います。拡張子のないインポートを `.ts` へ解決し、`electron` のインポートを画面を持たないスタブ `evals/electron-stub.mjs` へ置き換えて、アプリのソースを直接実行します。
 
-## How a run works
+<a id="how-a-run-works"></a>
 
-For each scenario the harness:
+## 1シナリオの処理
 
-1. **Materializes** a synthetic session (`session.json` + `events.jsonl`) into an
-   isolated temp sessions root (via the `SKILL_RECORDER_SESSIONS_DIR` override, so
-   your real sessions are never touched).
-2. Runs the **real pipeline** — `processSession()` builds `bundle.json` +
-   `description.md` exactly as the app does after Stop.
-3. Runs the **real describer** — `new Describer().analyze(id)`, the same agent the
-   app uses (reads the timeline/events, pulls frames only if ambiguous, calls
-   `submit_analysis`).
-4. **Scores** the analysis against the scenario's rubric.
+1. `session.json` と `events.jsonl` から合成セッションを作り、`SKILL_RECORDER_SESSIONS_DIR` で指定した専用の一時フォルダーに置きます。
+2. 実際の `processSession()` を呼び、アプリで録画を停止したときと同じように `bundle.json` と `description.md` を作成します。
+3. アプリと同じ `Describer` の `analyze(id)` を呼びます。エージェントは時系列やイベントを読み、曖昧な箇所で画像を参照する仕組みを使い、`submit_analysis` で結果を提出します。
+4. 解析をシナリオの基準で採点します。
 
-## Scoring
+<a id="scoring"></a>
 
-`scoring.ts` is deterministic and LLM-free — the primary pass/fail signal:
+## 採点
 
-- **intent keywords** — the intent sentence names the right subject.
-- **step count** — within an expected range (catches over/under-segmentation).
-- **expected apps** — the right applications appear.
-- **ordered actions** — key actions appear as an ordered subsequence across steps
-  (validates the reconstructed order, e.g. *open page → copy → into spreadsheet*).
-- **must-mention** — specific copied values/entities are surfaced.
-- **forbidden noise** — recorder bracketing (the Skill Recorder app), permission
-  dialogs, and tracking-param hops must **not** appear as steps. Scoped to step
-  titles/apps + intent, so the agent isn't penalized for *explaining* that it
-  correctly ignored noise.
+`scoring.ts` が LLM を使わずに、次の基準で合否を判定します。
 
-A forbidden-noise hit fails the scenario outright; otherwise pass = ≥80% of checks.
+- **目的のキーワード**。目的の文に正しい対象が含まれる。
+- **手順数**。期待する範囲内であり、細かすぎたり粗すぎたりしない。
+- **使用アプリ**。期待するアプリが現れる。
+- **操作の順序**。「ページを開く → コピー → スプレッドシートへ」のように主要操作が正しい順序で並ぶ。
+- **必須の値**。指定したコピー内容や対象が含まれる。
+- **除外項目**。Skill Recorder の開始と停止、権限ダイアログ、トラッキング パラメーターでの遷移などが手順に含まれない。検査するのは手順名、アプリ名、目的で、本文で無関係な操作を除外したと説明しても失点しない。
 
-`--judge` adds an optional second opinion: a separate Copilot agent grades
-faithfulness 0–5 against the scenario's ground truth (`judge.ts`). Off by default
-to keep runs deterministic.
+除外項目の一致が1つでもあればその場で不合格です。それ以外は検査項目の80%以上で合格です。
 
-## Scenarios
+`--judge` を指定すると、別の Copilot エージェントが `judge.ts` を使って正解データへの忠実さを0～5点で評価します。この判定は再現性のため既定では無効です。
 
-Business, repeatable knowledge-work patterns (`evals/scenarios/`):
+<a id="scenarios"></a>
 
-| id | task |
-|----|------|
-| `web-to-spreadsheet` | Copy pricing figures from a web page into a spreadsheet |
-| `invoice-extract` | Extract invoice rows from a web table into a spreadsheet |
-| `research-compile` | Research two articles and compile quotes into a note |
-| `directory-lookup` | Collect contact details from a directory into a spreadsheet |
-| `irrelevant-detour` | Research habit articles with a mid-task off-task recipe detour the intent rules out (Chrome + TextEdit) |
-| `expense-report` | Reconcile card charges against receipts and file an expense report (Chrome + Preview + Expensify) |
-| `release-notes` | Compile release notes from merged PRs, then version + deploy (Terminal + GitHub + editor) |
-| `lead-to-crm` | Qualify inbound leads and enter them into the CRM (Mail + LinkedIn + Salesforce) |
-| `windows-deploy` | Deploy a web app to Azure and log the live URL, on Windows (Edge + Windows Terminal/pwsh + Excel) |
-| `terminal-output-required` | Diagnose a failing test by querying indexed terminal output |
-| `terminal-failure-recovery` | Distinguish a failed deployment from the successful retry |
-| `terminal-sensitive-output` | Use terminal results without leaking a captured token |
+## シナリオ
 
-The last three are longer, multi-app **business processes** — they loop over several
-records, mix a native app with the browser and/or terminal, and end in a submit /
-deploy / commit step — stress-testing segmentation and app attribution beyond the
-simple copy→paste flows.
+`evals/scenarios/` には、繰り返し行う作業を収録しています。
 
-`irrelevant-detour` guards a different judgment: a **confident intent must exclude
-off-task activity**. Its stream is a clean habit-research flow with a brief hop to a
-cooking-recipe page (a different host, so it segments into its own step) that has no
-copy and no follow-up. Because the overall intent is unambiguous, the describer must
-recognize the recipe detour as irrelevant and drop it — the rubric fails outright if
-`recipe`/`allrecipes`/`cookie`/`chocolate` surfaces as a step title/app or in the intent.
+| ID | 作業 |
+| --- | --- |
+| `web-to-spreadsheet` | Web ページの価格をスプレッドシートへ転記 |
+| `invoice-extract` | Web の表から請求明細を抽出し、スプレッドシートへ転記 |
+| `research-compile` | 2本の記事を調べ、引用をノートにまとめる |
+| `directory-lookup` | ディレクトリから連絡先を集め、スプレッドシートに記録 |
+| `irrelevant-detour` | 習慣の記事を調べる途中で無関係なレシピを開く。目的から外れた操作が除外されるか確認（Chrome、TextEdit） |
+| `expense-report` | カードの利用明細を領収書と照合し、経費を申請（Chrome、Preview、Expensify） |
+| `release-notes` | マージ済みの Pull Request からリリースノートを作成し、バージョン更新とデプロイを実施（ターミナル、GitHub、エディター） |
+| `lead-to-crm` | 問い合わせから見込み顧客を確認し CRM に登録（Mail、LinkedIn、Salesforce） |
+| `windows-deploy` | Windows で Web アプリを Azure にデプロイし、稼働 URL を記録（Edge、Windows Terminal の `pwsh`、Excel） |
+| `terminal-output-required` | 記録したターミナル出力を検索し、失敗したテストの原因を調べる |
+| `terminal-failure-recovery` | 失敗したデプロイと成功した再試行を区別 |
+| `terminal-sensitive-output` | 記録されたトークンを漏らさず、ターミナルの結果を利用 |
 
-Each also exercises the describer's judgment: **pastes are inferred** (a paste
-emits no event), **recorder start/stop bracketing is dropped**, **tracking
-params are merged**, and **off-task detours the intent rules out are excluded**.
+経費精算、リリース、顧客登録のような長い作業では、複数の対象を順に扱い、ネイティブアプリとブラウザーやターミナルを往復します。最後の申請、デプロイ、コミットまで含めて、手順の分割とアプリの対応付けを確認します。
 
-## Add a scenario
+`irrelevant-detour` では、習慣の記事調査の中で別ホストのレシピを開きます。そのページではコピーも後続の操作もありません。目的は明確なのでレシピ閲覧を除外する必要があります。`recipe`、`allrecipes`、`cookie`、`chocolate` が手順名、アプリ名、目的に入ると不合格です。
 
-Create `evals/scenarios/<id>.ts` exporting a `Scenario`, and add it to
-`evals/scenarios/index.ts`. Build the event stream with the helpers in
-`scenario.ts` (`recorder`, `visit`, `appActivate`, `clipboard`, `terminal`,
-`marker`), and describe a good result in `rubric`. Keep `truth` accurate — it's
-what the `--judge` grades against.
+貼り付けはイベントが出ないため前後から推定します。録画の開始・停止は除外し、トラッキング パラメーターだけが異なる遷移はまとめ、目的と無関係な寄り道は省きます。
+
+<a id="add-a-scenario"></a>
+
+## シナリオの追加
+
+`evals/scenarios/<id>.ts` を作り、`Scenario` をエクスポートして `evals/scenarios/index.ts` に追加します。`scenario.ts` の `recorder`、`visit`、`appActivate`、`clipboard`、`terminal`、`marker` を使ってイベント列を作り、期待する結果を `rubric` に記述します。`--judge` は `truth` を正解として採点します。
 
 ```ts
 export const myScenario: Scenario = {
@@ -125,14 +94,11 @@ export const myScenario: Scenario = {
 };
 ```
 
-## Builder evals (`evals/builder/`)
+<a id="builder-evals-evalsbuilder"></a>
 
-A second, smaller harness that guards the **final stage** — the builder that
-generalizes an approved analysis into a Scout artifact — rather than the
-describer. It exists because of a real regression: when generalizing GitHub work,
-the builder preferred driving the **browser (Playwright)** instead of the **`gh`
-CLI**, even though Scout runs on the user's own Mac/Windows device where `gh` is
-installed and authenticated.
+## 自動化ビルダーの評価（evals/builder/）
+
+確認済みの解析を Scout の成果物へ変換する最終段階を検証します。以前は、ユーザーの Mac や Windows に認証済みの `gh` CLI がある場合でも、GitHub の作業を汎化する際に Playwright でブラウザーを操作する手順が選ばれていました。
 
 ```bash
 npm run eval:builder                       # all builder scenarios
@@ -141,57 +107,23 @@ npm run eval:builder -- --keep             # print the temp sessions dir
 npm run eval:builder -- --model=<model-id> # override the builder model
 ```
 
-**How it isolates the builder.** Each scenario seeds a **fixed, approved
-`Analysis`** (plus a minimal valid `bundle.json`) into a temp sessions dir, then
-runs the real `AutomationBuilder.build()` for a chosen `architecture` and
-`platform` (macOS or Windows). Seeding a frozen analysis removes describer
-variance, so a failure points squarely at the builder's instructions/catalogue.
-Only the plan's **steps** (`label` + `prompt`) are scored — the summary and
-generalization prose are intentionally excluded, so the builder isn't penalized
-for *explaining* which tool it avoided.
+各シナリオは、固定の確認済み `Analysis` と最小の有効な `bundle.json` を一時フォルダーに置き、指定の `architecture` と `platform`（macOS または Windows）で実際の `AutomationBuilder.build()` を実行します。こうして解析時のばらつきを除き、自動化の指示やツール一覧に起因する変化を確認します。採点は手順の `label` と `prompt` に絞ります。要約や汎化の説明で、使わなかったツールに言及しても失点しません。
 
-**Rubric** (`score.ts`): a scenario passes only if the steps satisfy every
-`mustUseAny` group (each group is a set of synonyms; at least one must appear) and
-contain **none** of the `forbidden` tokens — all case-insensitive substring
-matches over the step `label` + `prompt` text. A forbidden hit fails the scenario
-outright.
+`score.ts` は、大文字小文字を無視した部分一致で、すべての `mustUseAny` グループでいずれかの同義語が現れ、`forbidden` のいずれも現れないことを求めます。除外対象の一致が1つでもあれば不合格です。
 
-**Coverage.** Ten scenarios (`scenarios.ts` + `native-tool-scenarios.ts`), spanning
-macOS and Windows. Two guard the original **gh-vs-browser** regression directly
-(GitHub issue triage · darwin, stale-PR nudge · win32); the other eight mirror the
-describer eval set (`evals/scenarios/*`) so the generalization stage is guarded for
-every task type. Each rubric encodes the right native capability for its task, in
-one of two flavours:
+`scenarios.ts` と `native-tool-scenarios.ts` の10シナリオは macOS と Windows を対象とします。GitHub Issue の振り分け（`darwin`）と長期間更新のない Pull Request の通知（`win32`）で `gh` とブラウザーの選択を直接検証し、残る8件は解析評価と対になります。
 
-- **Native-tool-wins, browser forbidden** — the task maps to an unambiguous
-  first-class CLI/tool, so the browser is a genuine wrong answer. `release-notes`
-  and the two GitHub scenarios require `gh` (merged PRs, issues, PRs) and forbid
-  `browser_`/`playwright`; `windows-deploy` requires the `az` CLI (+ the `xlsx`
-  skill for the log) and forbids the browser. These are the strong "prefer the
-  device CLI over the UI" guards.
-- **Assert the native path, don't forbid a legitimate browser** — for web-read
-  tasks (`web-to-spreadsheet`, `invoice-extract`, `research-compile`) the rubric
-  requires `web_fetch` (and the `xlsx`/`docx` skill for the output) but does **not**
-  forbid the browser: preferring `web_fetch` while documenting a browser fallback
-  for a page that may need a login is exactly what we want, and a pure-browser
-  regression is still caught because `web_fetch` would be absent. Genuinely
-  browser-driven tasks (`expense-report` → Amex/Expensify, `lead-to-crm` →
-  Salesforce/LinkedIn have no CLI/API) don't forbid the browser at all; instead
-  they pin the one sub-step that *is* native — reading the local PDF receipts
-  (`view`/pdf), and reading the mailbox via `workiq_*` rather than the Mail UI.
+- `release-notes` と2つの GitHub シナリオは、対応する `gh` の使用を求め、`browser_` と `playwright` を除外します。`windows-deploy` は `az` CLI と作業記録用の `xlsx` スキルを求め、ブラウザーを除外します。
+- `web-to-spreadsheet`、`invoice-extract`、`research-compile` は `web_fetch` と、出力に対応する `xlsx` または `docx` スキルを求めます。ログインが必要なページではブラウザーも候補にできます。
+- `expense-report`（Amex、Expensify）と `lead-to-crm`（Salesforce、LinkedIn）はブラウザーを使う場面があります。ローカル PDF の領収書を読む `view`／PDF 処理や、メールを読む `workiq_*` など、アプリに依存せず直接使える処理を検証します。
 
-This is the suite that drove the catalogue fix in
-`electron/architectures/catalogues/scout-catalogue.ts` (prefer first-class device CLIs — above
-all `gh` — over the browser, platform-aware for zsh/bash vs PowerShell). When you
-add a describer scenario, add the matching builder scenario so the pair stays in
-lockstep.
+この評価をもとに、[Scout のツール一覧](../electron/architectures/catalogues/scout-catalogue.ts) で端末の CLI、特に `gh` を優先し、zsh・Bash と PowerShell の違いも反映しました。解析評価にシナリオを加えるときは、対応するビルダー評価も追加してください。
 
-## Skill builder evals (`evals/skillbuilder/`)
+<a id="skill-builder-evals-evalsskillbuilder"></a>
 
-A sibling of the automation builder harness that guards the **`SkillBuilder`** —
-the stage that turns an approved analysis into a reusable `SKILL.md` plan. Where
-the automation harness scores free-text step prompts for native-tool choice, this
-one scores the richer **plan structure** the builder now proposes.
+## スキルビルダーの評価（evals/skillbuilder/）
+
+確認済みの解析から `SKILL.md` の手順案を作る `SkillBuilder` を検証します。自動化ビルダーの評価は手順の文章からツール選択を調べ、スキルビルダーの評価は手順案の構造も調べます。
 
 ```bash
 npm run eval:skill                       # all skill scenarios
@@ -200,37 +132,22 @@ npm run eval:skill -- --keep             # print the temp sessions dir
 npm run eval:skill -- --model=<model-id> # override the builder model
 ```
 
-Both builder harnesses share the same seeding (`evals/lib/seed.ts`): a fixed,
-approved `Analysis` + a minimal `bundle.json` per scenario, so a failure points at
-the builder, not the describer.
+両方のビルダーは `evals/lib/seed.ts` で確認済みの `Analysis` と最小構成の `bundle.json` を用意します。
 
-**Rubric** (`score.ts`) — beyond the `mustUseAny` / `forbidden` native-tool checks,
-each scenario asserts the shape of the proposed `SkillPlan`:
+`score.ts` は `mustUseAny` と `forbidden` に加え、`SkillPlan` の構造を検査します。
 
-- **fixed values** — `minValues` requires the plan to declare at least that many fixed
-  `values`, and the scorer additionally checks that every `{{token}}` a step references
-  resolves to a declared value (no stale/unknown tokens survive to the artifact).
-- **typed steps** — `minCalculations` / `minActions` require the procedure to be
-  split into `calculation` (no side effect) and `action` (changes the world) steps.
+- `minValues` は固定値 `values` の最小個数を指定します。すべての `{{token}}` が定義済みの値を参照することも確認します。
+- `minCalculations` と `minActions` は、副作用のない `calculation` と状態を変更する `action` を区別し、それぞれの最小数を指定します。
 
-**Coverage.** Five scenarios. Two target **Scout**: `price-tracker-skill` (a canonical
-page URL → a fixed **value** referenced as `{{…}}`, `web_fetch` + the `xlsx` skill,
-calculations then an append) and `github-issue-triage-skill` (the gh-vs-browser case as a
-skill —
-must use `gh`, forbid the browser, and drive the mutating comment/label actions). Three
-target **Cowork** (Microsoft 365 Copilot), whose catalogue has **no browser automation**
-— each asserts the right M365 `server/Tool` is reached for while playwright/`click` and
-the web hosts are forbidden: `cowork-teams-digest` (read a channel then post via
-`m365_teams`), `cowork-outlook-reply` (triage the mailbox then reply via `outlook`), and
-`cowork-calendar-schedule` (find a slot then book via `outlook_calendar`).
+5シナリオのうち Scout 向けは2件です。`price-tracker-skill` は URL を固定値として宣言し、`{{…}}` で参照して `web_fetch` と `xlsx` で追記する手順を確認します。`github-issue-triage-skill` は `gh` によるコメントとラベル操作を求め、ブラウザーを除外します。
 
-## Sensitive detection + redaction evals (`evals/sensitive/`)
+残る3件は Cowork（Microsoft 365 Copilot）向けです。ツール一覧にブラウザー自動化はないため、playwright、`click`、Web ホストを除外し、正しい Microsoft 365 の `server/Tool` を使うことを求めます。`cowork-teams-digest` はチャネルの取得と `m365_teams` での投稿、`cowork-outlook-reply` はメールの振り分けと `outlook` での返信、`cowork-calendar-schedule` は空き時間の確認と `outlook_calendar` での予定登録を確認します。
 
-Guards the **on-device sanitization pipeline** that runs before anything is sent to
-GitHub Copilot on Analyze: the two detection layers (secretlint secrets · our
-in-repo structured-PII regex) and the two redaction seams (masking outgoing
-**text** channels, and OCR + blur of on-screen values in **frames** under Advanced
-protection).
+<a id="sensitive-detection--redaction-evals-evalssensitive"></a>
+
+## 機密情報の検出とマスキングの評価（evals/sensitive/）
+
+解析で GitHub Copilot に送信する前の端末内処理を確認します。対象は secretlint による秘密情報の検出と、構造化された個人識別情報を検出する正規表現、送信テキストのマスキング、高度な保護で使う画面の OCR とぼかし処理です。
 
 ```bash
 npm run eval:sensitive                 # all cases (text + frames)
@@ -238,64 +155,32 @@ npm run eval:sensitive -- --only=jwt,frame-card-split
 npm run eval:sensitive -- --verbose    # also print the redacted text / blur summary
 ```
 
-Unlike the describer/builder harnesses this one is **fully deterministic — no LLM,
-no model weights, no network** (exit code non-zero on any failure). secretlint and
-our regex run for real; the frame layer supplies OCR words + boxes directly (no
-tesseract/sharp) so the box-mapping is exercised offline.
+LLM、モデルの重み、ネットワークなしで恒常的に同じ結果を得られます。失敗時は終了コードが 0 以外になります。secretlint と正規表現は実際に実行します。画面側は OCR の単語と矩形を直接与え、Tesseract や Sharp を使わずに矩形の対応付けを確認します。
 
-**Corpus.**
-- `corpus.ts` — one outgoing text string per case with two ground-truth lists:
-  `mustRedact` (values that must be masked — recall) and `mustKeep` (ordinary text
-  that must survive — precision). Covers every secret type, each structured-PII
-  detector **and its validators** (Luhn-invalid card / invalid-area SSN are *not*
-  flagged), a check that personal names are **not** redacted (the names layer was
-  dropped), multi-detector strings, and clean prose/URLs/hashes.
-- `frames.ts` — synthetic OCR word layouts with the sensitive words flagged. Covers
-  a secret/email on screen, a card split across four OCR tokens (all four blur), a
-  session value known from clean text blurred across OCR words (cross-feed), and a
-  clean frame (nothing blurred).
+- `corpus.ts` の各送信文字列に、隠す値の `mustRedact` と残す値の `mustKeep` を定義します。秘密情報の種類、構造化された個人識別情報、Luhn 検査に失敗するカード番号や不正な地域番号を持つ SSN を除外する検証、氏名が隠されないこと、複数検出器の組み合わせ、通常の文章・URL・ハッシュを扱います。
+- `frames.ts` は、機密語を付けた合成 OCR の配置を使います。画面の秘密情報やメールアドレス、4つのトークンに分かれたカード番号の全体、通常のテキストから既知になった値の OCR 上での検出、ぼかし不要の画像を確認します。
 
-**Rubric** (`score.ts`): a text case runs the real detectors → `redactText` and
-checks every `mustRedact` value is gone from the output while every `mustKeep`
-value survives (clean cases must yield zero findings). A frame case runs the real
-`sensitiveFrameBoxes` and checks exactly the sensitive words' boxes are selected.
-The summary reports aggregate **recall** (sensitive detail masked/blurred) and
-**precision** (ordinary content kept).
+`score.ts` は実際の検出器と `redactText` を動かし、`mustRedact` が消え、`mustKeep` が残ることを確認します。機密を含まないテキストの検出件数は0件である必要があります。画像の評価では `sensitiveFrameBoxes` を使い、機密語の矩形だけが選ばれるか調べます。集計には再現率（隠すべき情報を隠せた割合）と適合率（通常の内容を誤って隠さずに済んだか）を出します。
 
-### Opt-in real-image OCR eval (`ocr-images.ts`)
+<a id="opt-in-real-image-ocr-eval-ocr-imagests"></a>
 
-The deterministic frame eval above feeds *synthetic* OCR words, so it can't catch
-the real leak vector: Tesseract **misreading** on-screen text badly enough that a
-value is never detected (and the frame ships unblurred). This separate, **non-hermetic**
-harness closes that gap end-to-end — it renders text to actual JPEGs with `sharp`,
-runs the **real `Ocr` engine** + the shared detectors via `sensitiveFrameBoxes`, and
-checks each sensitive line gets a blur box while clean lines are left alone.
+### 実画像の OCR を評価する（任意）
+
+合成 OCR の評価では、Tesseract の読み誤りで値を検出できず、ぼかしが適用されない場合を調べられません。`ocr-images.ts` は Sharp でテキストを JPEG に描き、実際の `Ocr` と `sensitiveFrameBoxes` で、機密行にぼかしの矩形が付き、通常行には付かないことを確認します。
 
 ```bash
 npm run eval:sensitive:ocr             # renders text → JPEG, real Tesseract (English)
 npm run eval:sensitive:ocr -- --keep   # also print each case's recognized OCR text
 ```
 
-It is **not** part of `eval:sensitive`: it needs the tesseract WASM core, `sharp`
-with system fonts, and a one-time `tessdata_fast` download per language (cached in
-the git-ignored `evals/.cache/tessdata/`). When the environment can't support it
-(no fonts / no network / OCR can't read a probe image) it **self-skips with exit 0**
-rather than failing. Scoring is layout-based and OCR-jitter tolerant: each line is
-rendered in its own fixed-height band, recall = "a blur box lands on a sensitive
-line", precision = "no box lands on a clean line". Cases cover a GitHub token, a
-credit card + email, a known-value cross-feed, and a Latin email amid Japanese text
-read with **English-only** traineddata (the ASCII value is recognized and blurred
-even though the surrounding Japanese OCRs to garbage — validating the eng-only
-product decision).
+この評価は `eval:sensitive` に含まれません。Tesseract の WASM コア、システムフォントを使う Sharp、言語ごとの初回の `tessdata_fast` 取得が必要です。言語データは Git 管理外の `evals/.cache/tessdata/` に保存します。フォントや通信がない、確認用画像を OCR できないといった環境では、終了コード 0 で評価をスキップします。
 
-## Mock pages (`evals/mocks/`)
+各行は固定の高さの領域に描画し、OCR の位置のばらつきを許容して評価します。機密行にぼかしが付けば検出成功、通常行にぼかしが付かなければ誤検出なしとします。GitHub トークン、カード番号とメールアドレス、既知の値に基づく検出、日本語文中の ASCII メールアドレスを英語の `eng` データだけで認識して隠せるかを確認します。
 
-Static, self-contained HTML fixtures matching the scenarios (`pricing.html`,
-`invoices.html`, `directory.html`, `article-habits.html`, `article-focus.html`;
-open `index.html` as a launcher). They're **safe** — nothing submits or sends.
+<a id="mock-pages-evalsmocks"></a>
 
-Use them for an optional **real** end-to-end capture: open a page in a browser,
-copy a value, paste it into TextEdit/Numbers *while the recorder is running*, then
-Stop and Analyze. This never performs an irreversible action (no emails, no
-messages, no saving over files). The synthetic scenarios reference the same
-pages/values, so a live capture should reconstruct the same intent + steps.
+## モックページ（evals/mocks/）
+
+シナリオに対応する静的なページです。`pricing.html`、`invoices.html`、`directory.html`、`article-habits.html`、`article-focus.html` があり、`index.html` から開けます。ページには投稿やデータ送信の処理がありません。
+
+実録画で試す場合は、録画中にブラウザーでページを開き、値をコピーして TextEdit や Numbers に貼り付け、録画を停止して解析します。合成シナリオも同じページと値を使うため、実録画でも同様の目的と手順が得られるかを確認できます。

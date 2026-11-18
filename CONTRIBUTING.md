@@ -1,7 +1,5 @@
-# Contributing
+# コントリビューション
 
-By submitting a contribution to this repository, you certify that you have the
-right to provide it and agree that it is licensed under the repository's MIT
-License. Third-party material must retain its original license and attribution;
-do not add copied code, fonts, media, models, or binaries without documenting
-their provenance and redistribution terms.
+このリポジトリに変更を提出すると、変更を提供する権利があることを表明し、リポジトリの [MIT License](LICENSE) の条件で提供することに同意します。
+
+第三者の素材を追加する場合は、元のライセンスと著作権表示を保持してください。コード、フォント、画像・音声、モデル、バイナリを取り込む際は、入手元と再配布条件を記録してください。

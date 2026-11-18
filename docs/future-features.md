@@ -1,38 +1,22 @@
-# Future features
+# 将来の機能
 
-Capabilities that are wired up in the codebase but deliberately not surfaced in
-the UI yet. Each entry is dormant, not dead: the backend path stays intact so the
-feature can be revived without re-plumbing it.
+画面には表示していないものの、将来再開できるよう内部の処理が残っている機能を記録します。
 
-## Manual markers ("Add marker")
+<a id="manual-markers-add-marker"></a>
 
-**Status:** backend retained, UI removed.
+## 手動マーカー（Add marker）
 
-A marker is a user-authored note captured mid-recording ("what are you doing
-right now?"). It was originally a HUD button that opened a blocking prompt.
+マーカーは録画中に、いま行っている作業などを利用者が記録するメモです。従来は録画画面のボタンから、操作を中断する入力ダイアログを開いていました。音声解説で作業の目的を手を止めずに時刻付きで記録できるようになり、ボタンを廃止しました。入力ダイアログが録画に映り込むことや、解析でマーカーのための画面切り替えを余分な操作とみなす問題も避けられます。
 
-**Why the button was removed:** voice narration supersedes it. Narration captures
-the same "stated intent" signal continuously, hands-free, and timestamped, without
-interrupting the task or letting a prompt dialog leak into the recorded frames. In
-practice the button was never used, and the describer already treated the "flick
-back to add a marker" moment as noise.
-
-**What still exists (the plumbing behind it):**
-
-| Layer | Location |
+| 層 | 実装箇所 |
 | --- | --- |
-| Renderer bridge | `electron/preload.cjs` (`window.skillRecorder.marker`) |
-| IPC channel + result type | `common/ipc.ts`, `electron/ipc.ts` |
-| Recorder handler | `electron/recorder/controller.ts` (`marker()`) |
-| Event type + payload | `common/events.ts` (`EventType.Marker`, `MarkerPayload`) |
-| Correlation / bundling | `common/correlation.ts`, `common/bundle.ts` (`step.markers`) |
-| Description surfacing | `common/describe.ts`, describer + skillbuilder `tools.ts` |
+| レンダラーのブリッジ | `electron/preload.cjs` の `window.skillRecorder.marker` |
+| IPC チャネルと結果の型 | `common/ipc.ts`、`electron/ipc.ts` |
+| 録画処理 | `electron/recorder/controller.ts` の `marker()` |
+| イベントの型とデータ | `common/events.ts` の `EventType.Marker`、`MarkerPayload` |
+| イベントの関連付けとまとめ処理 | `common/correlation.ts`、`common/bundle.ts` の `step.markers` |
+| 説明への反映 | `common/describe.ts`、解析とスキル作成の `tools.ts` |
 
-**What was removed:** the `Add marker` button and its `addMarker` handler in
-`src/Recorder.tsx`, plus the `.marker` styles in `src/App.css`.
+`src/Recorder.tsx` の `Add marker` ボタンと `addMarker` ハンドラー、`src/App.css` の `.marker` スタイルを削除済みです。
 
-**How to revive it well:** don't bring back the blocking `window.prompt`. Prefer a
-low-friction trigger that doesn't interrupt the recording, e.g. a global hotkey
-that flags the current moment (optionally with a quick inline note), so a marker
-becomes a precise "this instant matters" signal that complements the continuous
-narration transcript rather than duplicating it.
+再導入する場合は、録画を中断しないトリガーを使います。たとえば、グローバルショートカットで現在の時刻に印を付け、必要に応じて短いメモを添えられる方式なら、継続して記録する音声解説と併用できます。`window.prompt` のようなブロッキングダイアログは避けます。

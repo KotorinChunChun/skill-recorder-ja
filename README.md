@@ -6,9 +6,9 @@
 
 - 録画、セッション一覧、解析、スキルと自動化の作成画面を日本語化しました。
 - 文字起こしの既定値は OS の優先言語に従います。日本語環境では「既定（日本語）」と表示されます。
-- 解析時に選んだ言語でセッション名、目的、操作手順を生成します。すでに解析した録画は、再解析で言語を選び直せます。
+- 解析で選んだ言語でセッション名、目的、操作手順を生成します。解析済みの録画では「再解析」で言語を選び直せます。
 
-### Windows でソースから起動
+### Windows で日本語版をソースから起動
 
 Node.js 24.19 以降の 24 系と npm 11.17 以降を使います。PowerShell 7 で次のコマンドを実行してください。
 
@@ -23,365 +23,176 @@ npm run build
 npm start
 ~~~
 
-導入の詳細は [公式のソースビルド手順](https://github.com/microsoft/skill-recorder/blob/63bbb50111713b02f3bc0ebbd5f354f4eb038f99/INSTALL.md#manual-developer-setup) を参照してください。ライセンスと依存関係の注意事項は [LICENSE](LICENSE) と [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) にあります。
+手動ビルドの詳細は [INSTALL.md](INSTALL.md#manual-developer-setup) を参照してください。
 
-**Record yourself doing a task once, then turn it into a skill your AI agent can repeat.**
+Skill Recorder は、作業画面、アプリやウィンドウの切り替え、閲覧ページ、任意で開く記録対象のターミナルのコマンドと出力、任意の音声解説を記録します。GitHub Copilot CLI を使って作業の目的と手順を再構成し、次の形式で再利用できるようにします。
 
-> [!TIP]
-> **Want to install Skill Recorder? [Go to the latest release](https://github.com/microsoft/skill-recorder/releases/latest).**
-> Scroll to **Commit-pinned installation** and copy the complete command for your
-> operating system. It is ready to paste: you do not need to edit it or download
-> the source code yourself. [Step-by-step instructions below](#install-it).
+- **スキル**は、必要なときにエージェントが実行する `SKILL.md` 形式の手順です。
+- **自動化**は、スケジュールや条件をもとに実行する手順です。
 
-Skill Recorder captures a real work session on your screen: the clicks, the app and
-window switches, the pages you visit, commands/output from its optional recorded terminal,
-and (if you want) your spoken narration. It then uses
-the **GitHub Copilot CLI** to reconstruct *what you actually did* as a clear **intent plus
-an ordered list of steps**. From there, one step turns that single run into something an
-agent can reuse:
-
-- a **Skill**: a `SKILL.md` procedure an agent runs on demand, or
-- an **Automation**: the same procedure on a schedule or trigger.
-
-Both prefer the agent's **native tools** (like the `gh` CLI or `web_fetch`) over replaying
-UI clicks, and generalize from your one example, so recording yourself submitting *one*
-form can teach the agent to submit *all* of them.
+1回の操作例から、同種の作業にも使える手順を生成します。画面上のクリックをそのまま再現するより、`gh` CLI や `web_fetch` など、エージェントが直接利用できるツールを優先します。
 
 <p align="center">
-  <img src="docs/images/recorder.png" alt="Skill Recorder capture window: a record button, timer, an optional narration toggle with language and microphone settings, and readiness checks" width="420">
+  <img src="docs/images/recorder.png" alt="公式版の録画画面。録画ボタン、タイマー、音声解説の切り替え、言語とマイクの設定、準備状況が並ぶ" width="420">
   &nbsp;&nbsp;
-  <img src="docs/images/library.png" alt="Skill Recorder sessions view: recorded sessions on the left, the reconstructed intent and ordered steps on the right" width="520">
+  <img src="docs/images/library.png" alt="公式版のセッション一覧。左に録画、右に解析された目的と手順が並ぶ" width="520">
 </p>
 
-## How it works
+<a id="how-it-works"></a>
 
-1. 🔴 **Record.** Hit record (or `⌘⇧R` / `Ctrl+Shift+R` from anywhere) and just do your
-   task. Skill Recorder captures your screen and activity locally, in the background.
-2. 🎛️ **Control.** While recording, a small always-on-top bar shows capture,
-   microphone, and recorded-terminal state. Open the session-scoped terminal, mute,
-   unmute, or switch mics, then finish or discard with confirmation.
-3. 🧠 **Analyze.** Click Analyze and your selected AI provider reconstructs one overall intent and
-   an ordered list of steps. Review and edit until it reads right.
-4. ✨ **Create.** From an approved analysis, generate a reusable **Skill** and/or a
-   scheduled **Automation**.
+## 使い方
 
-For skills, **Review SKILL.md** optionally shows the complete, read-only file text
-(including frontmatter) before installation or export. Preparing a preview writes
-no skill files. Close and reopen it without regenerating; Add/Export from either
-surface uses that exact preview. Editing the plan discards the preview. You can
-still choose Add/Export directly without reviewing or adding a confirmation step.
-Review provides visibility into the generated instructions, not a security guarantee.
+1. **録画する。** 録画ボタンか、システム全体で使える `⌘⇧R`（macOS）または `Ctrl+Shift+R`（Windows）で録画を始め、普段どおりに作業します。画面と操作は端末内で記録されます。
+2. **録画中に操作する。** 最前面の小さな操作バーで、録画、マイク、記録対象のターミナルの状態を確認できます。ターミナルを開く、マイクをミュート・解除する、入力を切り替える、録画を終了する、確認して破棄するといった操作ができます。
+3. **解析する。** セッション一覧で「録画を解析」を選びます。選択した AI プロバイダーが目的と操作手順をまとめます。結果を確認し、必要に応じて編集してください。
+4. **作成する。** 確認した解析をもとに、スキルや自動化を作成します。
 
-### Import an existing recording
+「SKILL.md を確認」では、追加やエクスポートの前に、先頭の設定情報を含むファイル全体を読み取り専用で確認できます。プレビューを準備した段階ではスキルファイルは作成されません。画面を閉じても同じプレビューを再表示でき、どちらの画面から追加・エクスポートしてもその内容が使われます。手順を編集するとプレビューは破棄されます。プレビューは任意で、生成した手順を読むためのものです。実行時の安全性を保証するものではありません。
 
-Instead of recording your screen, use the smaller **folder icon beside Record** to
-choose a local **MP4 or WebM** file, such as a downloaded Teams demonstration.
-Chromium checks the actual video and audio before the details screen opens.
-Unsupported codecs, encrypted or unsupported track layouts, corrupt media, and
-files outside the import limits are rejected with an explanation. No converter,
-standalone FFmpeg installation, or additional codec download is required.
+<a id="import-an-existing-recording"></a>
 
-The initial limits are **512 MiB**, **15 minutes**, and **3840 x 2160 pixels**
-(or an equivalent pixel count). Audio must be mono or stereo at no more than
-48 kHz. Import supports one video track and at most one audio track. MP4 track
-types recognized are AVC, HEVC, VP9, or AV1 video with AAC/Opus audio; WebM
-recognizes VP8, VP9, or AV1 with Opus/Vorbis. Recognized track metadata is not a
-codec-support guarantee: the shipped Chromium runtime must actually decode it.
+### 保存済みの録画を読み込む
 
-Import memory use is higher than the compressed file size. A Windows ARM64
-stress check with a 512 MiB input, 15-minute stereo audio, and the existing
-Whisper model resident peaked at approximately **4.6 GB (4.25 GiB)** across
-Electron processes. This is a measurement, not a guarantee for every file or
-platform, and excludes other apps and the external Copilot CLI process. The
-import decoder has a **2 GiB** working-set guard; recordings that exceed it are
-rejected even when their file size is within the limit.
+録画ボタン横のフォルダーアイコンから、Teams のデモ動画など、この端末に保存された MP4 または WebM を選びます。Chromium が動画と音声を確認し、対応していないコーデックや暗号化、非対応のトラック構成、破損、制限超過を検出した場合は理由を表示します。変換ソフトや単体の FFmpeg、追加コーデックの導入は不要です。
 
-After validation, you can enter **Additional details**, or leave the field empty.
-Explain the task, supplement what is visible, or indicate where the demo happens.
-**Timestamps are guidance, not trimming:** other parts of the recording may still
-be processed. Choose the recording's spoken language when it contains audio.
-Analyze transcribes audio locally using the existing Whisper model (with the
-first-use download disclosed before proceeding); transcription failures stop the
-import's analysis so you can retry. Videos without audio and recordings with no
-detected speech are supported.
+- ファイルは最大 **512 MiB**、**15 分**、**3840 × 2160 ピクセル相当**です。
+- 映像トラックは1つ、音声トラックは最大1つです。音声はモノラルまたはステレオで、48 kHz 以下です。
+- MP4 は AVC、HEVC、VP9、AV1 の映像と AAC または Opus の音声を、WebM は VP8、VP9、AV1 の映像と Opus または Vorbis の音声を認識します。読み込めるかどうかは、同梱の Chromium が実際にデコードできるかで決まります。
 
-The resulting activity list uses the normal review flow: edit details, reorder,
-add or remove activities, then create and review your skill as usual. Imported
-analysis uses frames, speech, and your details, not captured OS events; it cannot
-recover hidden clipboard contents or commands that were never visible or spoken.
+512 MiB、15分のステレオ音声付き動画を Windows ARM64 で読み込んだ検証では、Whisper がメモリに読み込まれた状態で Electron プロセス全体のメモリ使用量が約 4.6 GB（4.25 GiB）に達しました。他のアプリと外部の Copilot CLI プロセスを除いた実測値です。デコーダーのワーキングセットには 2 GiB の上限があり、ファイルサイズが制限内でもこの上限を超える動画は読み込めません。
 
-The original file is untouched. A local copy and derived artifacts are stored in
-Sessions, and deleting the session removes only that copy. Selecting a file does
-not send it to the cloud. Choosing Analyze sends selected frames, transcribed
-speech, and your details through the existing privacy-protection pipeline to
-your selected AI provider. Debug exports include the imported media and details, just as
-they include private data from live recordings. Only import recordings you are
-authorized to use, and keep sensitive/confidential content out of them.
+検証後は「補足情報」に作業の内容や該当箇所の時刻を入力できます。時刻は AI の参考情報として使われます。動画全体が処理される場合もあります。音声付きの動画では音声と生成結果の言語を選びます。解析前に端末内の Whisper で文字起こしします。初回はモデルのダウンロードについて案内し、文字起こしに失敗したときは解析を止めて再試行できるようにします。音声のない動画や発話が検出されない動画にも対応します。
 
-Live recording, its permissions and settings, and its event-first analysis are
-unchanged. Imports do not require microphone or screen-capture permission.
+解析結果は通常の録画と同じ画面で確認できます。操作の説明を編集し、追加、削除、並べ替えをしてからスキルを作成できます。読み込んだ動画の解析で使う情報は、映像、発話、補足情報です。画面にも音声にも現れないクリップボードの内容やコマンドは復元できません。
 
-For development, `npm test` includes the import contract/privacy tests.
-`npm run test:import:runtime` uses the reviewed Electron runtime to generate
-synthetic MP4/WebM files with Chromium and exercise decoding, seeking, silent and
-absent audio, unsupported codecs, cancellation, and source-file preservation.
-Run that check on each release target; it does not replace checking representative
-Teams files. Add `-- --large` to also import an exact 512 MiB synthetic MP4 and
-check rejection of a file one byte over the limit; this check needs additional
-memory and temporary disk space. The initial local measurements and runtime check were performed on
-Windows ARM64; other platforms and real meeting recordings require their own
-verification.
+元のファイルは保存場所に残ります。ローカルに作ったコピーと関連データはセッションに保存され、そのセッションを削除するとコピーが削除されます。ファイル選択時点ではデータを送信しません。「録画を解析」を選ぶと、選択した画像、文字起こし、補足情報が既存のプライバシー保護処理を経て AI プロバイダーに送信されます。デバッグ用データには、録画の場合と同様に、読み込んだ動画や補足情報も含まれます。利用権限のある動画を使い、機密情報の混入を避けてください。動画の読み込み操作にマイクや画面収録の権限は不要です。
 
-## Get started
+`npm test` に読み込みの仕様とプライバシーのテストが含まれます。`npm run test:import:runtime` は確認済みの Electron を使って Chromium で MP4 と WebM の合成動画を作り、デコード、再生位置の移動、無音や音声なし、非対応コーデック、キャンセル、元ファイルの保持を検証します。リリース対象の環境ごとに実行し、代表的な Teams の録画も確認してください。`-- --large` を加えると、ちょうど 512 MiB の MP4 の読み込みと、1バイト超過したファイルの拒否も確認できます。この検証にはメモリと一時ディスク容量が必要です。初期の実測と実行時検証は Windows ARM64 で行っています。
 
-Skill Recorder is published as a **source release**: one command downloads a pinned Node.js
-runtime, builds the exact release commit on your machine, and adds a **Skill Recorder (Source)**
-app you can relaunch anytime. Nothing is installed globally. You'll need either a GitHub account with
-**Copilot access**, or a supported model provider's API key; the Copilot CLI ships
-with the app and powers both options.
+<a id="get-started"></a>
+<a id="install-it"></a>
 
-macOS is the primary target. Windows 11 (x64 and ARM64) is supported too (see
-[`WINDOWS-VALIDATION.md`](WINDOWS-VALIDATION.md)).
+## Microsoft 公式版の導入
 
-### Install it
+[Microsoft の公式リリース](https://github.com/microsoft/skill-recorder/releases/latest) では、指定コミットを端末上でビルドするソースインストーラーを提供しています。対応する Node.js を取得し、端末内に **Skill Recorder (Source)** の起動項目を作ります。システム全体へのインストールは不要です。主な対象は macOS で、Windows 11 の x64 と ARM64 にも対応します。[Windows の検証](WINDOWS-VALIDATION.md)
 
-Open the **[latest release](https://github.com/microsoft/skill-recorder/releases/latest)** and
-follow these steps:
-
-1. On the release page, scroll to **Commit-pinned installation**. Find **Windows 11
-   x64 or ARM64** or **macOS or Ubuntu**, then copy the **entire command** in that
-   section using the copy button at the top-right of the code block.
-2. Open **PowerShell** from the Windows Start menu, or **Terminal** on macOS or
-   Ubuntu. Paste the command and press **Enter**.
-3. Keep that window open while installation completes. The installer downloads
-   what it needs, builds the app on your computer, and creates shortcuts.
-   **On Windows**, follow the completion notice: finish recording, choose **Quit**
-   in every running copy, wait for them to close, then open **Skill Recorder
-   (Source)** from the desktop or Start menu. Windows does not launch the app
-   automatically. On macOS or Ubuntu, the installer launches Skill Recorder.
-   The first installation can take several minutes.
+1. リリースページの **Commit-pinned installation** で Windows 11 x64 or ARM64 または macOS or Ubuntu を選び、コードブロックのコマンド全体をコピーします。
+2. Windows は PowerShell、macOS と Ubuntu はターミナルで実行します。
+3. ビルドが完了するまでウィンドウを開いたまま待ちます。Windows では、録画中なら終了し、起動中のすべての Skill Recorder で **Quit** を選んで閉じてから、デスクトップかスタートメニューの **Skill Recorder (Source)** を開きます。macOS と Ubuntu では、通常はインストーラーが起動します。初回は数分かかる場合があります。
 
 > [!IMPORTANT]
-> **Copy the command from the release page, not a template from the technical docs.**
-> The release command already contains the correct version identifier; there is
-> nothing to replace. Do not paste commands containing
-> `<40-character-release-commit>` literally.
-> You do **not** need Git, a separate Node.js installation, or the **Manual developer
-> setup** instructions. The **Source code (zip)** and **Source code (tar.gz)** links
-> under **Assets** are not app installers.
+> リリースページのコマンドには正しいコミットが含まれています。`<40-character-release-commit>` が残った例はそのまま実行できません。リリースの **Assets** に並ぶ **Source code (zip)** と **Source code (tar.gz)** はソースのアーカイブです。この導入方法では Git や Node.js をあらかじめ入れる必要はありません。
 
-To review the script before running it, follow the release page's
-**inspect-first instructions** instead. Installation remains subject to your
-organization's policies.
+事前にスクリプトを確認する方法、起動設定、更新、アンインストールは [`INSTALL.md`](INSTALL.md) を参照してください。組織の実行ポリシーに従ってください。
 
-**Open it again later:** use **Skill Recorder (Source)** on your Windows desktop or
-Start Menu; on macOS, find it in `~/Applications`, Spotlight, or Launchpad; on
-Ubuntu, use the matching application entry. You do not need to reinstall each time.
-Launching again reveals the existing recorder or recording controls instead of
-starting another copy. Older revisions without this protection must be quit
-manually before opening an updated revision.
-Advanced options, including running in the background on macOS or Ubuntu, are in
-[`INSTALL.md`](INSTALL.md#commit-pinned-one-line-installation).
+Windows ではショートカット、macOS では `~/Applications` や Spotlight、Launchpad、Ubuntu ではアプリ一覧から再起動できます。新しい版で再度起動操作をすると、すでに動いている録画画面または操作バーが表示されます。この仕組みを持たない古い版は、更新後の版を開く前に終了してください。
 
-### Then record
+<a id="then-record"></a>
 
-1. **Grant Screen Recording.** On first launch, macOS asks for Screen Recording permission;
-   grant it and you're ready to record.
-2. **Record, Analyze, Create.** Do your task, then Analyze. When no AI connection
-   is configured, an existing GitHub Copilot login is recognized and reused
-   automatically, including after an upgrade from 0.8.0. Otherwise, choose
-   **Bring your own model** or **GitHub authentication** the first time AI is needed.
-   Both options remain available to everyone, including Microsoft FTEs, through
-   **AI connection** in Sessions. Recording needs neither.
-   If you choose GitHub, Skill Recorder reuses a valid login or offers sign-in. Finish
-   authorization in your browser; the app verifies sign-in and automatically retries
-   the interrupted analysis once. There is no login terminal window to close.
-   Canceling sign-in or leaving that analysis prevents the automatic retry.
+### 録画と AI 接続
 
-On Windows, a local Microsoft Entra tenant hint can offer a choice between
-**Microsoft Enterprise SSO** and a **Personal GitHub account**. This is only a
-routing hint, not proof of employment. Microsoft sign-in has two separate steps:
-finish SSO in the browser, then authorize the GitHub Copilot app. When SSO lands on
-`github.com/enterprises/microsoft`, close that tab, return to Skill Recorder, and
-choose **Authorize Copilot**. SSO alone does not authorize the app. Use the same
-browser profile and Microsoft-linked GitHub account for both steps.
-Without a hint, and on macOS/Linux,
-sign-in goes directly to the standard GitHub flow. No work-email prompt is required.
+macOS では初回起動時に画面収録の許可が必要です。録画そのものに AI 接続は不要です。初めて解析や生成を行うときは、セッション一覧の「AI 接続」で「独自のモデルを使う」か「GitHub で認証」を選びます。設定がない場合は、すでに使える GitHub Copilot のログインを検出して再利用します。0.8.0 からの更新でも同じです。いずれの接続方法も Microsoft の従業員を含めて選べます。
 
-The authorization step opens the default browser using the CLI's web OAuth flow,
-not a device code. Keeping the same browser profile lets GitHub reuse the session
-from SSO, so you can approve the GitHub Copilot app without entering a code.
-If GitHub asks you to sign in again, check that you are using the same browser profile.
-After authorization, close that tab and return to Skill Recorder; the app verifies
-access before continuing.
+GitHub 認証が必要な場合は、既定のブラウザーでログインと承認を完了します。アプリがアクセスを確認し、中断した解析を一度だけ再試行します。サインインをキャンセルするか該当の解析を離れた場合は、自動で再試行しません。
 
-Skill Recorder pins Copilot CLI 1.0.78, which supports web OAuth without a terminal,
-and runs `--no-auto-update login --web-flow` so sign-in does not depend on a
-different CLI version in the user's auto-update cache. Older bundled versions
-such as 1.0.71 do not support `--web-flow`.
+Windows では端末内の Microsoft Entra テナント情報をもとに、**Microsoft Enterprise SSO** と **Personal GitHub account** の選択が表示されることがあります。この情報は接続経路の選択に使います。Microsoft SSO で `github.com/enterprises/microsoft` に到達したら、そのタブを閉じて Skill Recorder に戻り、**Authorize Copilot** を選んで GitHub Copilot アプリを承認してください。2つの操作で同じブラウザープロファイルと、Microsoft に紐づいた GitHub アカウントを使います。テナント情報がない端末や macOS、Linux では標準の GitHub サインインに進みます。勤務先メールアドレスの入力は不要です。
 
-Sign-in can be canceled and times out after five minutes. If browser login fails,
-the app shows an error and a manual command for the bundled CLI (use PowerShell on
-Windows). After manual sign-in, retry the analysis yourself. Signing in from a skill
-or automation builder does not automatically repeat a build or installation.
+承認には Copilot CLI の Web OAuth を使います。同じブラウザープロファイルなら、GitHub の SSO セッションを利用してデバイスコードの入力なしで承認できます。再ログインを求められたら、ブラウザープロファイルを確認してください。承認後はタブを閉じ、Skill Recorder に戻ります。固定の Copilot CLI 1.0.78 で `--no-auto-update login --web-flow` を使うため、自動更新キャッシュにある別のバージョンに依存しません。1.0.71 など、古い同梱版は `--web-flow` に対応していません。
 
-To inspect the script before running it, set install options, update, or uninstall, see
-[`INSTALL.md`](INSTALL.md).
+サインインはキャンセルでき、5分でタイムアウトします。ブラウザーからのログインに失敗すると、アプリにエラーと同梱 CLI の手動コマンドが表示されます。Windows では PowerShell で実行し、手動サインイン後は解析を再試行してください。スキルや自動化の作成画面でサインインした場合は、作成や導入を自分で再開します。
 
-### Bring your own model
+<a id="bring-your-own-model"></a>
 
-Open **AI connection** in Sessions to configure or change your connection.
-BYOM uses the bundled Copilot SDK/CLI without GitHub login or a Copilot
-subscription. Model requests go to your selected endpoint and are billed by
-that provider; BYOM does not mean local/offline processing.
+### 独自のモデルを使う（BYOM）
 
-| Provider | Required fields |
+セッション一覧の「AI 接続」から設定します。BYOM は同梱の Copilot SDK と CLI を使いますが、GitHub ログインや Copilot 契約は不要です。モデルへのリクエストは選んだ接続先に送信され、プロバイダー側の料金が適用されます。
+
+| プロバイダー | 必要な設定 |
 | --- | --- |
-| Microsoft Foundry / Azure OpenAI (v1) | API key, full `/openai/v1/` base URL, deployment name |
-| Azure OpenAI (versioned) | API key, resource host without an API path, deployment name, Azure API version |
-| OpenAI | API key and model ID; the standard base URL is prefilled |
-| Anthropic | API key and model ID; the standard base URL is prefilled |
-| Custom OpenAI-compatible | API key, HTTPS base URL, model ID, supported API format |
+| Microsoft Foundry / Azure OpenAI (v1) | API キー、`/openai/v1/` を含むベース URL、デプロイ名 |
+| Azure OpenAI（バージョン指定） | API キー、API パスなしのリソースホスト、デプロイ名、Azure API バージョン |
+| OpenAI | API キーとモデル ID。標準のベース URL は入力済み |
+| Anthropic | API キーとモデル ID。標準のベース URL は入力済み |
+| カスタム（OpenAI 互換） | API キー、HTTPS のベース URL、モデル ID、対応する API 形式 |
 
-Use a model supporting **image input and tool calling**. **Advanced** selects
-Responses versus Chat Completions for compatible providers. **Test and save**
-sends a small, billable synthetic-image/tool test, never a recording. Custom
-endpoint support depends on actual protocol and model compatibility.
-Keyless local services and managed-identity authentication are not exposed by
-this first API-key flow.
+画像入力とツール呼び出しに対応したモデルを使います。「詳細設定」で対応するプロバイダーの Responses API または Chat Completions API を選べます。「テストして保存」は合成画像とツール呼び出しを送信するため、利用料金がかかります。録画ファイルはこのテストでは送信されません。カスタム接続先が使えるかどうかは、実際のプロトコルとモデルの互換性で決まります。キーなしのローカルサービスやマネージド ID による認証は、この設定画面では選べません。
 
-Keys are protected using the operating system's key storage on Windows 11
-(x64/ARM64), macOS, and Ubuntu with a secure desktop keyring. If secure storage
-is unavailable, the key-entry screen says:
+Windows 11（x64、ARM64）、macOS と、対応するデスクトップのキーリングを備えた Ubuntu では OS の安全なストレージでキーを保護します。ストレージを利用できないときはキーをメモリだけに保存し、次回起動時に再入力を求めます。秘密でない設定は、保存できる範囲で保持します。「キーを削除」はアプリ内のキーを削除する操作です。プロバイダー側のキーはそこで管理してください。
 
-> Secure space is unavailable. The Key will be saved in-memory and will be re-asked next time.
+AI 接続を切り替える前に、進行中の AI 処理を終了またはキャンセルしてください。録画や保存済みの結果は保持され、進行中の会話はリセットされます。キーはデバッグ用データに含まれません。接続設定と SDK の会話状態は、録画とは別にアプリデータに保存されます。キーを削除しても会話履歴は残ります。
 
-There is no extra step: BYOM still works for the current app session. Non-secret
-settings are remembered where possible. **Forget key** removes this app's stored
-and in-memory credential, not the key at your provider. Finish or cancel active
-AI work before changing connections. Saved recordings and outputs are preserved,
-but live conversations are reset. Keys are not included in debug exports.
-BYOM connection settings and SDK conversation state are stored separately from
-recordings in app data. Forgetting a key does not erase conversation history.
+`npm run test:ai` は接続設定、セキュアストレージやメモリでの保存、接続の状態遷移を確認します。`npm run test:ai:runtime` は合成プロバイダーを端末内で立ち上げ、同梱の SDK と CLI による画像・ツールのやり取りとキーの保存状態を確認します。どちらも実際の API キーや有料モデルは使いません。OS のキー保管や実プロバイダーでの確認は [AI 接続と認証情報の確認](WINDOWS-VALIDATION.md#ai-connection-and-credential-smoke-checks) を参照してください。
 
-For development, `npm run test:ai` covers configuration, protected/memory-only
-storage, and connection lifecycle. `npm run test:ai:runtime` exercises the bundled
-SDK/CLI against a local synthetic provider, including tool-image transport and
-credential persistence checks. Neither command needs a real API key or sends
-requests to a paid model. Native key-storage and live-provider release checks
-are described in [`WINDOWS-VALIDATION.md`](WINDOWS-VALIDATION.md#ai-connection-and-credential-smoke-checks).
+<a id="what-gets-captured"></a>
 
-> ⚠️ **Keep secrets out of your recordings.** Don't record, type, paste, or narrate
-> passwords, tokens, API keys, or other confidential info. Choosing *Analyze* sends
-> recording data to your selected AI provider. Skill Recorder reminds you before every recording.
-> Details in [What gets captured](#what-gets-captured).
+## 記録と送信の内容
 
----
+録画、保存、画像の抽出、任意の音声文字起こしは端末内で行います。「録画を解析」を選ぶと、イベント時系列（ウィンドウや文書のタイトル、URL、コピー内容の冒頭、ターミナルのコマンド）、抽出画像、文字起こし、解析中に要求された範囲のターミナル出力を、選択した AI プロバイダーに送信します。保護が有効なら、要求された出力を送る前に、コマンドとローカルに保存したターミナル出力全体から秘密情報や個人を識別できる情報を端末内で検査します。
 
-*Everything below is for people who want the details, or want to hack on the code.*
+- **ウィンドウ**は、アクティブなアプリやウィンドウの切り替えを記録します。
+- **ブラウザー**は、開いているページの URL を取得します。Windows では [アドレスバーの表示値](docs/windows-capture.md) を使います。
+- **画面**は Chromium で録画します。低頻度の画像は、画面が変わったときか定期保存の時刻に残します。
+- **クリップボード**は、コピーしたテキストの冒頭を記録します。
+- **音声解説**は任意です。Whisper が対応する99言語で端末内の文字起こしを行います。初回に約252 MBのモデルを取得します。
+- **記録対象のターミナル**は、録画操作バーから開いた場合に限り、コマンド、作業ディレクトリ、シェル、終了状態、実行時間、出力全体を記録します。出力のアプリ独自の上限はなく、録画の容量に含まれます。既存ターミナルの監視、シェル設定の変更、グローバルフックの追加は行いません。
 
-## What gets captured
+> [!WARNING]
+> 録画中はパスワード、アクセストークン、API キー、認証情報、機密情報を画面に表示したり、入力、貼り付け、コピー、読み上げをしたりしないでください。録画前にもアプリで案内します。
 
-Recording, storage, frame extraction, and optional narration transcription all happen
-**on your computer**; nothing leaves while you record. Only when you choose **Analyze**
-does Skill Recorder send the event timeline (window/document titles, URLs, clipboard
-previews, and terminal commands), extracted screen images, narration text, and bounded
-terminal-output excerpts requested during analysis to your selected AI provider for processing.
-When protection is enabled, terminal commands and the complete local terminal transcript
-participate in the same on-device secret/PII scan before any requested excerpt is returned.
+<a id="develop-from-source"></a>
 
-The in-app "Records your screen and activity" panel spells out exactly what's collected:
+## 開発環境
 
-- **Window tracking:** active-app / window switches.
-- **Browser URLs:** the page you're on (macOS).
-- **Screen video:** recorded by Chromium; low-rate snapshots are kept only when the
-  screen changes or a heartbeat is due.
-- **Clipboard:** short previews of copied text that tie steps together.
-- **Narration** *(optional)*: spoken commentary, transcribed **on-device** in any of
-  Whisper's 99 supported languages (a one-time ~252 MB model download on first use).
-- **Recorded terminal** *(only when opened from the floating recording bar)*: command,
-  cwd, shell, exit status, duration, and the complete terminal output. The transcript
-  has no app-imposed size cap and counts toward the saved session's storage. It captures
-  only the app-owned terminal for that recording—there are no global hooks, profile
-  edits, background command monitors, or observation of existing terminals.
+リリースのソースを入手し、Node.js 24 系を使います。準備のコマンドは [手動開発環境の構築](INSTALL.md#manual-developer-setup) を参照してください。依存関係と確認済み Electron を準備したあと、`npm run dev` で Vite と Electron をホットリロード付きで起動できます。配布用ビルドやライセンスの扱いは [`INSTALL.md`](INSTALL.md) に、バージョンや依存関係を変更してリリースする手順は [`RELEASING.md`](RELEASING.md) にあります。
 
-> ⚠️ **Please don't capture secrets.** Passwords, access tokens, API keys, credentials, and
-> other confidential information should never be recorded, typed, pasted, shown, copied,
-> or narrated during a session.
+<a id="evals"></a>
 
-## Develop from source
+## 評価
 
-**For developers changing the code, not for installing the app.** To use Skill
-Recorder, follow [Install it](#install-it) instead.
+合成録画を使い、Copilot による解析とスキル・自動化の作成を評価できます。[評価の詳細](evals/README.md)
 
-Requires **Node.js 24**. After checking out a release revision:
+~~~bash
+npm run eval            # 合成録画の解析を採点
+npm run eval:terminal   # ターミナル出力の検索とマスキングを評価
+npm run eval:builder    # スキルや自動化への汎化を評価
+~~~
 
-```bash
-npm ci
-npm run compliance:licenses
-npm run dev
-```
+<a id="documentation"></a>
 
-`npm run dev` starts Vite and launches the Electron app with hot-reload; `⌘⇧R` (macOS) /
-`Ctrl+Shift+R` (Windows) toggles recording from anywhere. Full manual setup, the build and
-`dist` scripts, and the licensing boundary between local source builds and redistributable
-packages are in [`INSTALL.md`](INSTALL.md). Maintainers changing versions, dependencies,
-assets, or releases must follow [`RELEASING.md`](RELEASING.md).
+## ドキュメント
 
-## Evals
+- [インストール、更新、開発環境](INSTALL.md)
+- [リリース手順](RELEASING.md)
+- [Windows の動作確認](WINDOWS-VALIDATION.md) と [Windows での記録](docs/windows-capture.md)
+- [評価の手順](evals/README.md) と [将来の機能](docs/future-features.md)
+- [第三者ライセンスと表示の日本語案内](docs/third-party-notices-ja.md) と [原文](THIRD-PARTY-NOTICES.md)
 
-The Copilot **describer** and **builders** have a fixture-based eval suite; see
-[`evals/README.md`](evals/README.md).
+<a id="security"></a>
 
-```bash
-npm run eval            # score the describer against synthetic recordings
-npm run eval:terminal   # score indexed terminal-output use and redaction
-npm run eval:builder    # score the skill/automation generalization
-```
+## セキュリティ
 
-## Documentation
+脆弱性は公開 GitHub Issues に記載せず、[セキュリティ窓口](SECURITY.md) を確認してください。
 
-- **[INSTALL.md](INSTALL.md):** install options, inspect-first install, updating,
-  uninstalling, and manual developer setup.
-- **[RELEASING.md](RELEASING.md):** maintainer release runbook.
-- **[evals/README.md](evals/README.md):** the describer / builder eval harness.
-- **[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md):** licenses for bundled dependencies.
+<a id="support"></a>
 
-## Security
+## サポート
 
-Please don't report security vulnerabilities through public GitHub issues. See
-[`SECURITY.md`](SECURITY.md) for Microsoft's coordinated-disclosure process and reporting
-channels.
+不具合や機能要望の窓口は [サポート案内](SUPPORT.md) にあります。報告の前に既存の Issue を検索してください。
 
-## Support
+<a id="license"></a>
 
-File bugs and feature requests through
-**[GitHub Issues](https://github.com/microsoft/skill-recorder/issues)** (search existing issues
-first to avoid duplicates). Support is limited to the resources described in
-[`SUPPORT.md`](SUPPORT.md).
+## ライセンス
 
-## License
+[MIT License](LICENSE)
 
-[MIT](LICENSE)
+<a id="contributing"></a>
 
-## Contributing
+## コントリビューション
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit [Contributor License Agreements](https://cla.opensource.microsoft.com).
+[コントリビューションの条件](CONTRIBUTING.md) と [行動規範](CODE_OF_CONDUCT.md) を確認してください。Microsoft の公式リポジトリに送る Pull Request では、Contributor License Agreement（CLA）への同意が必要になる場合があります。CLA bot が対象を判定し、Pull Request の状態チェックやコメントで手順を案内します。同じ CLA を使うリポジトリでの手続きは1回です。[Contributor License Agreements](https://cla.opensource.microsoft.com)
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+<a id="trademarks"></a>
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+## 商標
 
-## Trademarks
-
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
-trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+Microsoft の商標やロゴを使う場合は [Microsoft Trademark & Brand Guidelines](https://www.microsoft.com/legal/intellectualproperty/trademarks/usage/general) に従ってください。改変版で Microsoft の公式提供や支援を受けていると誤解させる使い方を避けてください。第三者の商標とロゴには、各権利者の方針が適用されます。

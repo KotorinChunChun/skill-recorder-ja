@@ -1,108 +1,63 @@
-# Installing Skill Recorder from source
+# Skill Recorder をソースから導入する
 
 > [!TIP]
-> **Just want to install and use the app? [Go to the latest release](https://github.com/microsoft/skill-recorder/releases/latest).**
-> Scroll to **Commit-pinned installation** and copy the complete command for your
-> operating system. Paste it into **PowerShell** on Windows or **Terminal** on
-> macOS or Ubuntu, then press **Enter**. No changes to the command are needed.
-> See the [step-by-step guide](README.md#install-it) for more help.
+> 日本語版は [README の Windows 手順](README.md#日本語版) で起動できます。Microsoft 公式版は [公式リリース](https://github.com/microsoft/skill-recorder/releases/latest) の **Commit-pinned installation** から、対象 OS のコマンド全体をコピーして実行してください。[公式版の導入の流れ](README.md#install-it)
 
-This page is the **advanced installation reference**, including script inspection,
-configuration, and manual developer setup. The commands below are templates, not
-ready-to-run release commands.
+この文書では、Microsoft 公式版のソースインストーラー、実行前の確認、設定、更新、アンインストールと、手動の開発環境を扱います。Windows、macOS、Ubuntu で、指定コミットのソースを端末内でビルドします。Node.js、Electron、ネイティブ依存関係、GitHub Copilot CLI は、公式の入手先または設定済みの互換レジストリから取得します。
 
-Skill Recorder can run directly from an exact source revision on Windows, macOS,
-or Ubuntu. These methods do not download a prebuilt Skill Recorder application.
-Node.js, Electron, native dependencies, and the GitHub Copilot CLI are obtained
-from canonical upstreams or compatible configured registries and assembled
-locally.
+この手順で作成したビルドはローカル実行専用です。ビルド済みアプリ、`node_modules`、取得したランタイムを再配布しないでください。配布用のバイナリには `npm run dist*` を使い、生成された完全なコンプライアンス一式を添付してください。
 
-The generated build is for local execution only. Do not redistribute the build,
-`node_modules`, or downloaded runtimes. Release binaries must use the
-repository's `npm run dist*` commands and include the complete generated
-compliance bundle.
+<a id="commit-pinned-one-line-installation"></a>
 
-## Commit-pinned one-line installation
+## コミットを固定した1行インストール
 
-Replace `<40-character-release-commit>` with the full 40-character commit SHA
-published for the release. Do not run a command with that placeholder still in it:
-it is not a real version and the download will fail. For a command with the correct
-value already filled in, use the
-[latest release](https://github.com/microsoft/skill-recorder/releases/latest).
+例の `<40-character-release-commit>` は、公式リリースに記載された40文字の完全なコミット SHA に置き換えてください。仮の文字列のまま実行するとダウンロードに失敗します。[公式リリース](https://github.com/microsoft/skill-recorder/releases/latest) には SHA を設定済みのコマンドがあります。
 
-### Windows 11 x64 or ARM64
+<a id="windows-11-x64-or-arm64"></a>
+
+### Windows 11 x64 または ARM64
 
 ```powershell
 $commit="<40-character-release-commit>"; $env:SKILL_RECORDER_COMMIT=$commit; irm "https://raw.githubusercontent.com/microsoft/skill-recorder/$commit/install.ps1" | iex
 ```
 
-### macOS or Ubuntu
+<a id="macos-or-ubuntu"></a>
+
+### macOS または Ubuntu
 
 ```sh
 commit="<40-character-release-commit>"; curl -fsSL "https://raw.githubusercontent.com/microsoft/skill-recorder/$commit/install.sh" | SKILL_RECORDER_COMMIT="$commit" bash
 ```
 
-To launch in the background and retain rolling logs on macOS or Ubuntu:
+バックグラウンド起動し、世代管理したログを残す場合は以下を使います。
 
 ```sh
 commit="<40-character-release-commit>"; curl -fsSL "https://raw.githubusercontent.com/microsoft/skill-recorder/$commit/install.sh" | SKILL_RECORDER_COMMIT="$commit" SKILL_RECORDER_DETACHED=1 bash
 ```
 
-The commit appears twice deliberately: it pins both the script being executed
-and the source that the script builds. Never replace it with `master`, `main`, a
-branch name, or an unverified tag.
+コミット SHA を2箇所に指定するのは、実行するスクリプトとビルド対象を固定するためです。`master` や `main` などのブランチ名、検証していないタグは使わないでください。
 
-The source installers:
+1. インストーラーは完全なコミット SHA を受け取り、変化する参照を拒否します。
+2. ネイティブの x64 または ARM64 を選び、対応 OS を確認します。`install.sh` は macOS と Ubuntu に対応します。
+3. `nodejs.org` から公式のポータブル版 Node.js 24 を取得し、`SHASUMS256.txt` と照合します。Windows では OpenJS Foundation の Authenticode 署名も確認します。
+4. GitHub Codeload から指定コミットのソースを取得します。
+5. lockfile の URL が正規の npmjs URL であることを確認します。設定済みのレジストリまたは互換ミラーで `npm ci` を実行し、Electron の公式リリースからランタイムを取得して、公式チェックサムを確認済みのポリシーと照合します。
+6. `npm run compliance:licenses` を実行し、対象環境のパッケージに確認済みのライセンス資料が不足していれば停止します。
+7. ローカルでビルドし、リポジトリと依存関係のライセンスを保管します。Electron と Copilot の実行ファイルのハッシュも記録します。
+8. Windows ではスタートメニューとデスクトップ、macOS ではランチャーと `~/Applications` の `Skill Recorder (Source)`、Ubuntu ではランチャーとデスクトップエントリを作成します。
+9. 作成したショートカットの一覧を表示します。
 
-1. Require a full commit SHA and reject mutable references.
-2. Select the native x64 or ARM64 architecture and reject unsupported operating
-   systems. `install.sh` accepts macOS and Ubuntu only.
-3. Download an official portable Node.js 24 runtime from `nodejs.org` and verify
-   its archive against Node.js's `SHASUMS256.txt`. Windows additionally verifies
-   the OpenJS Foundation Authenticode signature.
-4. Download only the exact source commit from GitHub Codeload.
-5. Validate that the lockfile contains canonical npmjs URLs, run `npm ci` through
-   the user's configured registry or compatible mirror, install Electron from its
-   official release endpoint, and confirm Electron's official checksum manifest
-   matches the reviewed compliance policy.
-6. Run `npm run compliance:licenses` and fail if any installed platform package
-   lacks reviewed legal material.
-7. Build locally, retain repository/dependency licenses, and record hashes for
-   the installed Electron and Copilot executables.
-8. Create Start Menu **and** desktop shortcuts on Windows; a launcher plus a
-   `Skill Recorder (Source)` app in `~/Applications` (reachable from Spotlight,
-   Launchpad, and the Dock) on macOS; and a launcher plus desktop entry on Ubuntu.
-9. Print a final confirmation listing the shortcuts that were created.
+Windows では初回も自動起動しません。ターミナルの `@` で囲まれた完了メッセージに従い、録画を終え、起動中のすべての Skill Recorder で **Quit** を選びます。終了を待ってから **Skill Recorder (Source)** を開いてください。ショートカットをどちらも作れなかった場合は起動コマンドが表示されます。macOS と Ubuntu では自動起動します。`SKILL_RECORDER_NO_LAUNCH=1` で無効にできます。
 
-On Windows, installation **does not launch the app**, even on a first install.
-The terminal shows an `@`-bordered completion notice: finish recording, choose
-**Quit** in all running copies, wait for them to close, then open **Skill Recorder
-(Source)** using the shortcut. If neither shortcut could be created, the notice
-provides a manual launch command instead. macOS and Ubuntu retain automatic
-launch unless disabled with `SKILL_RECORDER_NO_LAUNCH=1`.
+導入に管理者権限やシステム全体の Node.js と Copilot CLI は不要です。AI 機能にはネットワークと、利用権限のある GitHub Copilot アカウントまたは対応プロバイダーの API キーが必要です。[独自のモデルを使う（BYOM）](README.md#bring-your-own-model) に対応する接続先、モデル、キーの保管方法があります。OS の安全なストレージがない場合はキーをメモリに保持して利用できます。Ubuntu で起動をまたいで保存するには、対応するデスクトップのキーリングをロック解除してください。録画だけなら AI 接続は不要です。
 
-No administrator access, global Node.js installation, or global Copilot CLI
-installation is required. AI features require network access and either GitHub
-Copilot authentication/entitlement or a supported model provider's API key.
-Choose between them at the first AI action; recording needs neither.
-See [Bring your own model](README.md#bring-your-own-model) for endpoint/model
-requirements and secure-key storage on Windows, macOS, and Ubuntu. If a secure
-OS store is unavailable, the key form explains the automatic memory-only
-fallback; this does not block BYOM. Ubuntu needs an unlocked supported desktop
-keyring to remember keys between launches.
+ダウンロードしたスクリプトを直接シェルに渡す方法は、組織のポリシーで無効になっている場合があります。次の手順で内容とハッシュを確認できます。Gatekeeper、Smart App Control、アプリケーション制御ポリシー、エンドポイント保護により実行が制限される場面では、組織の方針に従ってください。
 
-Piping a downloaded script directly to a shell gives you no opportunity to
-inspect it first and may be disabled by enterprise policy. The inspect-first
-procedures below are preferred.
+<a id="inspect-first-installation"></a>
 
-Source installation is not a security-policy bypass. Gatekeeper, Smart App
-Control, application-control policy, or endpoint protection may still block
-downloaded or locally assembled components.
+## スクリプトを確認してから導入する
 
-## Inspect-first installation
-
-Compare the displayed script SHA-256 with the value published in the
-corresponding GitHub Release before executing it.
+表示された SHA-256 を、対応する GitHub Release に掲載された値と照合してからスクリプトを実行してください。
 
 ### Windows
 
@@ -140,77 +95,52 @@ SKILL_RECORDER_COMMIT="$commit" bash "$script"
 rm -f "$script"
 ```
 
-## Source-installer options and locations
+<a id="source-installer-options-and-locations"></a>
 
-| Variable | Platforms | Meaning |
+## インストーラーの設定と保存先
+
+| 環境変数 | 対象 | 内容 |
 | --- | --- | --- |
-| `SKILL_RECORDER_COMMIT` | all | Required full 40-character source commit |
-| `SKILL_RECORDER_INSTALL_ROOT` | all | Override the per-user source/runtime directory |
-| `SKILL_RECORDER_NO_LAUNCH=1` | macOS, Ubuntu | Install and validate without launching; Windows never auto-launches |
-| `SKILL_RECORDER_NO_DESKTOP_SHORTCUT=1` | Windows | Create only the Start Menu shortcut |
-| `SKILL_RECORDER_DETACHED=1` | macOS, Ubuntu | Launch in the background with file logging |
-| `SKILL_RECORDER_LOG_KEEP` | macOS, Ubuntu | Number of detached launch logs to retain; default `5` |
+| `SKILL_RECORDER_COMMIT` | 全環境 | 必須。40文字の完全なソースコミット |
+| `SKILL_RECORDER_INSTALL_ROOT` | 全環境 | ユーザー別のソースとランタイムの保存先 |
+| `SKILL_RECORDER_NO_LAUNCH=1` | macOS、Ubuntu | インストールと検証だけを行う。Windows は常に手動起動 |
+| `SKILL_RECORDER_NO_DESKTOP_SHORTCUT=1` | Windows | スタートメニューのショートカットだけを作る |
+| `SKILL_RECORDER_DETACHED=1` | macOS、Ubuntu | バックグラウンド起動し、ログをファイルに保存 |
+| `SKILL_RECORDER_LOG_KEEP` | macOS、Ubuntu | バックグラウンド起動ログの保持数。既定は `5` |
 
-Default installation roots:
+既定のインストール先は次のとおりです。
 
-- Windows: `%LOCALAPPDATA%\SkillRecorder`
-- macOS: `~/Library/Application Support/SkillRecorder`
-- Ubuntu: `${XDG_DATA_HOME:-~/.local/share}/SkillRecorder`
+- Windows は `%LOCALAPPDATA%\SkillRecorder`
+- macOS は `~/Library/Application Support/SkillRecorder`
+- Ubuntu は `${XDG_DATA_HOME:-~/.local/share}/SkillRecorder`
 
-Every revision is installed under `versions/<commit>`. The current launcher is
-updated only after the selected revision passes dependency, license, integrity,
-and build checks.
+各版は `versions/<commit>` に配置されます。依存関係、ライセンス、整合性、ビルドの確認が通るとランチャーの参照先が更新されます。
 
-## Re-running the same command
+<a id="re-running-the-same-command"></a>
 
-Running the Windows command again with the same commit does not download or
-rebuild anything. The installer verifies the existing `versions/<commit>`
-installation, refreshes the Start Menu and desktop shortcuts, and prints the
-manual launch instructions without starting the app.
+## 同じコマンドを再実行する
 
-If an earlier attempt failed part-way, the portable Node.js archive and the
-source archive it had already fetched are kept in `<install root>\cache` and
-reused on the next attempt. Cached files are re-verified by SHA-256 before use —
-the Node.js archive against the checksums published by nodejs.org on every run —
-and are deleted once the revision is installed. Deleting the `cache` directory is
-always safe.
+Windows で同じコミットを指定すると、`versions/<commit>` の既存の導入内容を確認し、ショートカットを更新します。再取得や再ビルドは行わず、手動起動の案内を表示します。
 
-## Relaunching after it closes
+途中で失敗した場合、Node.js とソースのアーカイブは `<install root>\cache` に残り、次の試行で再利用されます。再利用前に SHA-256 を確認し、Node.js は毎回 `nodejs.org` の公開チェックサムと照合します。完了時にはキャッシュを削除します。手動で削除したキャッシュは必要に応じて再取得されます。
 
-After a successful install you can reopen Skill Recorder without re-running the
-installer:
+<a id="relaunching-after-it-closes"></a>
 
-- Windows: the **Skill Recorder (Source)** desktop shortcut, or the matching
-  Start Menu entry.
-- macOS: **Skill Recorder (Source)** in `~/Applications`, searchable from
-  Spotlight and Launchpad and pinnable to the Dock.
-- Ubuntu: the **Skill Recorder (Source)** desktop entry, or run the launcher
-  script directly.
+## アプリを開き直す
 
-Each entry runs the current launcher, so it always starts the most recently
-installed revision when no copy is already running. New revisions share a
-single-instance lock: another launch reveals the existing recorder or recording
-controls without starting or stopping a recording. If a different revision is
-already running, quit it before launching the newly installed one.
+- Windows はデスクトップまたはスタートメニューの **Skill Recorder (Source)** を開きます。
+- macOS は `~/Applications` の **Skill Recorder (Source)** を使います。Spotlight や Launchpad から検索でき、Dock に固定できます。
+- Ubuntu は **Skill Recorder (Source)** のデスクトップエントリか、ランチャースクリプトから起動します。
 
-Legacy revisions without that lock can still run alongside a newer revision.
-The Windows completion notice is a manual handover instruction, not automatic
-detection or shutdown of those older copies.
+ランチャーは最新の導入済みコミットを参照します。単一起動ロックに対応した版を再度開くと、すでに起動している録画画面か操作バーを表示します。この操作で録画は開始・停止されません。別の版が動いている場合は先に終了してください。ロックに対応していない旧版は新しい版と同時に動くことがあります。Windows の完了メッセージに従って旧版を手動で終了してください。
 
-## Manual developer setup
+<a id="manual-developer-setup"></a>
 
-> [!IMPORTANT]
-> **This section is for developers who want to work on the code. It is not required
-> to install or use Skill Recorder.** Use the ready-to-run command on the
-> [release page](https://github.com/microsoft/skill-recorder/releases/latest) instead.
-> If you continue below, replace `<40-character-release-commit>` with the release's
-> actual full commit SHA before running any commands. Pasting the placeholder
-> literally causes a **404 Not Found** error and the remaining steps cannot work.
+## 手動で開発環境を作る
 
-Install Node.js 24.19 or newer within the Node.js 24 release line from its
-official publisher. This supplies npm 11.17 or newer, which is required to
-enforce the reviewed dependency lifecycle-script policy. Download the exact
-commit archive rather than repository history.
+日本語版の Windows 手順は [README](README.md#日本語版) にあります。以下のダウンロード例は Microsoft 公式版を取得します。`<40-character-release-commit>` は [公式リリース](https://github.com/microsoft/skill-recorder/releases/latest) の完全なコミット SHA に置き換えてください。そのまま実行すると `404 Not Found` になります。
+
+Node.js の公式配布元から 24.19 以降の 24 系を入れます。確認済みの依存スクリプトのポリシーを適用するため、npm 11.17 以降が必要です。公式版は、リポジトリの履歴全体の代わりに指定コミットのアーカイブを取得します。
 
 ### Windows PowerShell
 
@@ -249,15 +179,14 @@ npm start
 
 ### Ubuntu
 
-Install the basic archive/download tools if the machine does not already have
-them:
+ダウンロードやアーカイブ処理に必要なツールがなければ先に準備します。
 
 ```sh
 sudo apt-get update
 sudo apt-get install --yes ca-certificates curl tar
 ```
 
-Then use the same pinned source process:
+次に、指定コミットのソースを取得してビルドします。
 
 ```sh
 commit="<40-character-release-commit>"
@@ -275,98 +204,47 @@ npm run build
 npm start
 ```
 
-For hot-reload development, run `npm run dev` after the validated install
-sequence above and `npm run compliance:licenses`.
+ホットリロードを使う場合は、確認済みの依存関係と Electron を用意し、`npm run compliance:licenses` の完了後に `npm run dev` を実行します。
 
-The lockfile pins the dependency graph with canonical `registry.npmjs.org` URLs
-and integrity hashes. npm may map those URLs to a configured compatible
-corporate registry. Use `npm ci`, not `npm install`, and do not regenerate the
-lockfile during installation. Keep the entire checkout, `.compliance`, and
-dependency legal files.
+lockfile は正規の `registry.npmjs.org` の URL と整合性ハッシュを記録します。npm はこれらの URL を互換性のあるレジストリに割り当てられます。インストールには `npm ci` を使い、lockfile を再生成しないでください。ソース、`.compliance`、依存関係のライセンス資料は一緒に保管します。
 
-### Networks that block registry.npmjs.org
+<a id="networks-that-block-registrynpmjsorg"></a>
 
-The installers run a portable Node.js runtime that is unpacked into the
-installation root. Because Node.js's portable archives ship no builtin npmrc,
-npm would resolve its global configuration inside that throwaway runtime
-directory and ignore the registry configured for the machine. The installers
-therefore locate the machine's real global npmrc and pass it to the portable npm
-so that `replace-registry-host` maps the lockfile's canonical npmjs URLs onto the
-configured mirror. Machines with no npm configuration are unaffected and continue
-to use `registry.npmjs.org`.
+### registry.npmjs.org に接続できないネットワーク
 
-On Windows, this discovery does not require Node.js or npm to be installed.
-The installer preserves an explicit `NPM_CONFIG_GLOBALCONFIG`; otherwise it
-checks the system npm's reported global configuration, an explicit
-`NPM_CONFIG_PREFIX` (`etc\npmrc` beneath that prefix), or the standard locations:
-`%APPDATA%\npm\etc\npmrc`, then `nodejs\etc\npmrc` beneath the native, current,
-and x86 Program Files directories. This includes managed configuration placed
-in those locations before npm is available on PATH. Existing user `.npmrc`
-and npm environment settings retain npm's normal precedence. The installer
-does not modify these files.
+ポータブル版 Node.js には組み込みの `npmrc` がありません。インストーラーは端末のグローバル設定を探してポータブル版 npm に渡します。`replace-registry-host` が正規の npmjs URL を設定済みのミラーに割り当てます。設定がない端末では `registry.npmjs.org` を使います。
 
-This reads locally available settings; it does not trigger an Intune/device-policy
-sync. On an unconfigured Windows machine, a public-registry network failure can
-trigger one Microsoft-specific recovery attempt if local device/account metadata
-provides a Microsoft Entra tenant hint. This is only a routing hint, not
-authorization. The installer announces the retry, applies the registry only to
-the retry process, and preserves lockfile integrity and script approvals. It
-never changes saved settings or weakens TLS verification. Explicit npm
-configuration, other organizations, and non-network failures do not trigger this
-fallback. If recovery is unavailable or fails, the installer stops with guidance
-for your organization's approved package-feed provisioning.
+Windows では Node.js と npm を事前に入れる必要はありません。明示的な `NPM_CONFIG_GLOBALCONFIG` を優先し、続いてシステムの npm が報告するグローバル設定、`NPM_CONFIG_PREFIX` の `etc\npmrc`、`%APPDATA%\npm\etc\npmrc`、ネイティブ・現在・x86 の Program Files にある `nodejs\etc\npmrc` を探します。PATH 登録前に配置された管理対象の設定も検出します。ユーザーの `.npmrc` と環境変数の優先順位、設定ファイルはそのままです。
 
-If npm is already on PATH, configure a mirror once with:
+端末内にある設定を読み、Intune やデバイスポリシーの同期は行いません。未設定の Windows 端末で公開レジストリに接続できず、端末やアカウントの情報に Microsoft Entra テナントが示されている場合は、Microsoft 向けの経路を一度だけ試すことがあります。この情報は接続経路の選択に使います。再試行のプロセスにだけレジストリを設定し、lockfile の整合性とスクリプトの承認を維持します。TLS 検証や保存済みの設定は変更しません。npm が明示的に設定済みの場合、他の組織、ネットワーク以外の障害には適用されません。再試行できないときや失敗したときは、組織で承認されたパッケージフィードを用意するよう案内します。
+
+npm が PATH にある場合は、承認されたミラーを設定できます。
 
 ```sh
 npm config set registry <url> --location=global
 ```
 
-If npm is not installed globally, the Windows installer's dependency-error
-message includes a command using the exact path to its downloaded npm. That
-command sets the approved registry in your user configuration; substitute the
-URL supplied by your organization and follow its feed-authentication instructions.
+システム全体に npm を入れていない Windows では、依存関係のエラーに、取得済みの npm のパスを使うコマンドが表示されます。組織に指定された URL に置き換え、フィードの認証手順に従ってください。ミラーを使う場合も、lockfile の整合性ハッシュを検証します。
 
-The installers preserve existing npm configuration. The Windows recovery path
-above is limited to an otherwise unconfigured public-registry failure. The
-lockfile's integrity hashes are verified whichever registry serves the packages,
-so a mirror cannot substitute different content.
+<a id="licensing-boundary"></a>
 
-## Licensing boundary
+## ライセンスと再配布の範囲
 
-The source channels distribute this repository's MIT-licensed source. The
-user's package manager obtains Sharp/libvips, ONNX Runtime, Tesseract.js, the
-unmodified GitHub Copilot CLI, and other npm dependencies through its configured registry;
-the installer obtains the reviewed Electron runtime from GitHub. Canonical
-registry URLs and integrity hashes keep the lockfile portable across direct
-npmjs access and compatible corporate mirrors. The local build is not a
-redistributable application package.
+ソース公開では MIT License のソースを配布します。Sharp/libvips、ONNX Runtime、Tesseract.js、改変していない GitHub Copilot CLI などは設定済みレジストリから利用者側で取得します。確認済みの Electron はインストーラーが GitHub から取得します。lockfile の URL と整合性ハッシュは npmjs と互換のある社内ミラーの両方で利用できます。
 
-Each platform's compliance check retains:
+プラットフォームごとのコンプライアンス処理には、`LICENSE` と `THIRD-PARTY-NOTICES.md`、npm パッケージ（Copilot CLI を含む）のライセンス全文、Electron と Chromium の表示、`.compliance/licenses` の GPL・LGPL・MPL・Artistic-2.0 の原文、`.compliance` の Sharp/libvips と ONNX Runtime の表示、`.compliance/tesseract-core` の Tesseract の WebAssembly コンポーネントの表示、未解決項目のない一覧を含めます。
 
-- `LICENSE` and `THIRD-PARTY-NOTICES.md`;
-- complete license files installed with npm packages, including the Copilot CLI
-  license;
-- Electron and Chromium runtime notices;
-- canonical GPL, LGPL, MPL, and Artistic-2.0 texts under `.compliance/licenses`;
-- platform-specific Sharp/libvips and ONNX Runtime notices under `.compliance`;
-- Tesseract WebAssembly component notices under `.compliance/tesseract-core`;
-- an inventory with no unresolved dependency-license entries.
+アプリを再配布するには `npm run dist*` を使います。同梱ライブラリに必要な表示、対応ソースコード、パッチ、ハッシュ、再リンク手順をまとめます。[第三者ライセンスと表示の日本語案内](docs/third-party-notices-ja.md)
 
-Anyone redistributing a generated application must instead use the supported
-`npm run dist*` pipeline. It packages the exact notices, corresponding source,
-patches, hashes, and relinking instructions required by the bundled libraries.
+<a id="updating-and-uninstalling"></a>
 
-## Updating and uninstalling
+## 更新とアンインストール
 
-To update, rerun the source installer with the new release's full commit SHA.
-On Windows, the installer leaves running copies untouched and does not launch
-the new revision. Finish recording, choose **Quit** in every running copy, wait
-for shutdown to finish, then use the refreshed shortcut to open the installed
-revision. Do not rerun the installer just to reopen the app.
-Test the new revision before deleting an older revision.
+新しいリリースの完全なコミット SHA を指定してインストーラーを実行します。Windows では録画を終了し、起動中のすべての版で **Quit** を選んでから、更新したショートカットで起動してください。通常の起動はショートカットから行い、新しい版の動作を確認してから古い版を削除します。
 
-### Windows uninstall
+<a id="windows-uninstall"></a>
+
+### Windows でアンインストール
 
 ```powershell
 Remove-Item "$([Environment]::GetFolderPath('Programs'))\Skill Recorder (Source).lnk" -Force
@@ -374,14 +252,18 @@ Remove-Item "$([Environment]::GetFolderPath('DesktopDirectory'))\Skill Recorder 
 Remove-Item "$env:LOCALAPPDATA\SkillRecorder" -Recurse -Force
 ```
 
-### macOS uninstall
+<a id="macos-uninstall"></a>
+
+### macOS でアンインストール
 
 ```sh
 rm -rf "$HOME/Applications/Skill Recorder (Source).app"
 rm -rf "$HOME/Library/Application Support/SkillRecorder"
 ```
 
-### Ubuntu uninstall
+<a id="ubuntu-uninstall"></a>
+
+### Ubuntu でアンインストール
 
 ```sh
 data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
@@ -389,24 +271,20 @@ rm -f "$data_home/applications/skill-recorder-source.desktop"
 rm -rf "$data_home/SkillRecorder"
 ```
 
-These commands leave recorded-session/application data outside the source
-installation root intact.
+これらのコマンドはソースインストール先と起動項目を削除します。インストール先の外に保存されたセッションとアプリデータは残ります。
 
-## Release maintainer checklist
+<a id="release-maintainer-checklist"></a>
 
-The complete repeatable process is documented in
-[`RELEASING.md`](RELEASING.md).
+## リリース担当者の確認項目
 
-1. Confirm all contributors and employers have authorized the MIT release.
-2. Build and test the exact release commit on every advertised native platform
-   and architecture.
-3. Confirm Windows, macOS, and Ubuntu CI produce a license inventory with no
-   unresolved entries.
-4. Publish the full commit SHA, never a branch name, in installation commands.
-5. Publish SHA-256 values for that commit's `install.ps1` and `install.sh`.
-6. Protect the release tag from movement or deletion.
-7. Test the one-line and inspect-first source paths on clean machines.
-8. Do not mirror or repackage Node.js, Electron, npm dependencies, or Copilot
-   binaries in the source-install channel.
-9. For any prebuilt release, use `npm run dist*` and publish the complete,
-   version-matched compliance materials.
+詳しい手順は [`RELEASING.md`](RELEASING.md) にあります。
+
+1. コントリビューターとその雇用主から MIT License で公開する許可を得る。
+2. 対象の各 OS とアーキテクチャで、公開するコミット自体をビルドして検証する。
+3. Windows、macOS、Ubuntu の CI で、未解決項目のないライセンス一覧を生成する。
+4. 導入コマンドでブランチ名の代わりに完全なコミット SHA を公開する。
+5. 対象コミットの `install.ps1` と `install.sh` の SHA-256 を公開する。
+6. リリースタグを移動・削除から保護する。
+7. 1行で導入する方法と、実行前に確認する方法をクリーンな環境で検証する。
+8. ソース公開に Node.js、Electron、npm 依存関係、Copilot バイナリのミラーや再梱包品を含めない。
+9. ビルド済みのアプリを公開する場合は `npm run dist*` を使い、その版のコンプライアンス資料一式を公開する。
