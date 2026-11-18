@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -168,9 +168,13 @@ test("recording uses a saved override or the system language when reset", async 
       language: "ja",
     });
     assert.equal(loadNarrationPreference(file), SYSTEM_NARRATION_LANGUAGE);
-    assert.equal((await controller.start({ narration: true })).ok, true);
+    const silent = await controller.start();
+    assert.equal(silent.ok, true);
+    assert.ok(silent.sessionId);
     assert.equal(audio.narrationLanguage, "ja");
     assert.equal((await controller.stop()).ok, true);
+    const meta = JSON.parse(await readFile(path.join(root, silent.sessionId, "session.json"), "utf8"));
+    assert.equal(meta.narrationLanguage, "ja");
   });
 });
 

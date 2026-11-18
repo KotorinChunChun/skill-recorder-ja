@@ -1,4 +1,5 @@
 import type { CopilotSignInResult } from "../common/ipc";
+import type { NarrationLanguage } from "../common/narration";
 
 export async function completeSignIn(
   result: Promise<CopilotSignInResult>,
@@ -13,6 +14,7 @@ export async function completeSignIn(
 
 export interface AnalysisRun {
   readonly retried: boolean;
+  readonly language?: NarrationLanguage;
   canceled: boolean;
 }
 
@@ -22,10 +24,10 @@ export class AnalysisRecovery {
   private eligible: AnalysisRun | null = null;
   private signingIn: AnalysisRun | null = null;
 
-  beginRun(): AnalysisRun | null {
+  beginRun(language?: NarrationLanguage): AnalysisRun | null {
     if (this.current || this.signingIn) return null;
     this.eligible = null;
-    return (this.current = { retried: false, canceled: false });
+    return (this.current = { retried: false, canceled: false, language });
   }
 
   isCurrent(run: AnalysisRun): boolean {
@@ -52,7 +54,7 @@ export class AnalysisRecovery {
     if (this.current || this.signingIn !== run || this.eligible !== run) return null;
     this.signingIn = null;
     this.eligible = null;
-    return (this.current = { retried: true, canceled: false });
+    return (this.current = { retried: true, canceled: false, language: run.language });
   }
 
   endSignIn(run: AnalysisRun, invalidate = true): void {

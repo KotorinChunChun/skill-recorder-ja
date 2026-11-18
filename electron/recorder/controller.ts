@@ -355,6 +355,7 @@ export class RecorderController {
         stoppedAt: null,
         platform: process.platform,
         appVersion: app.getVersion(),
+        narrationLanguage: this.narrationLanguage,
       };
       store = new SessionStore(meta);
     } catch (error) {

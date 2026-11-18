@@ -1998,6 +1998,12 @@ dialog.ai-connection-dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
   border-bottom: 1px solid var(--line);
 }
 
+.ws-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .ws-titles {
   display: flex;
   align-items: baseline;

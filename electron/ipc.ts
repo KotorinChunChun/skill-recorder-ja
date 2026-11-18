@@ -32,7 +32,7 @@ import { IPC } from "../common/ipc";
 import { AiConnectionError, type AiConnectionResult } from "../common/ai-provider";
 import { aiConnection } from "./ai-provider";
 import type { AutomationPlan } from "../common/automation";
-import type { NarrationLanguagePreference } from "../common/narration";
+import { isNarrationLanguage, type NarrationLanguagePreference } from "../common/narration";
 import type { ImportResult } from "../common/import";
 import type { ImportManager } from "./imports/manager";
 import { readSessionImport } from "./imports/metadata";
@@ -377,10 +377,13 @@ export function registerIpc(
 
   handleAi(
     IPC.analyze,
-    async (_event, sessionId?: string): Promise<AnalyzeResult> => {
+    async (_event, sessionId?: string, language?: unknown): Promise<AnalyzeResult> => {
       const id = resolveSessionId(sessionId);
       if (!id) return { ok: false, error: "No completed session to analyze yet." };
       if (!isValidSessionId(id)) return { ok: false, error: "Unknown session." };
+      if (language !== undefined && !isNarrationLanguage(language)) {
+        return { ok: false, error: "Unsupported analysis language." };
+      }
       try {
         if (readSessionImport(sessionDir(id))) {
           return await imports.run(id, async (signal) => {
@@ -399,7 +402,7 @@ export function registerIpc(
             if (redaction.frameRedactor?.active && !redaction.frameRedactor.ready) {
               throw new Error("Screen protection is not ready, so imported video cannot be inspected. Retry after the protection model is ready.");
             }
-            const analysis = await describer.analyze(id, redaction, signal);
+            const analysis = await describer.analyze(id, redaction, signal, language);
             const review = summarizeProtection(report, redaction);
             saveSensitiveReport(id, review);
             sessionsChanged();
@@ -422,7 +425,7 @@ export function registerIpc(
       // proceeds; the (raw-value-free) report is returned purely for a UI summary.
       const { redaction, report } = await buildRedaction(id);
       try {
-        const analysis = await describer.analyze(id, redaction);
+        const analysis = await describer.analyze(id, redaction, undefined, language);
         const review = summarizeProtection(report, redaction);
         saveSensitiveReport(id, review);
         return { ok: true, analysis, review };
@@ -487,7 +490,7 @@ export function registerIpc(
     return { ok: true };
   });
 
-  ipcMain.handle(IPC.listSessions, () => listSessions());
+  ipcMain.handle(IPC.listSessions, () => listSessions(recorder.status().narrationLanguage));
 
   ipcMain.handle(IPC.deleteSession, async (_event, sessionId: string): Promise<DeleteSessionResult> => {
     if (!isValidSessionId(sessionId)) return { ok: false, error: "Unknown session." };

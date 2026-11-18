@@ -13,13 +13,16 @@ function interrupted(guard: AnalysisRecovery) {
 
 test("verified sign-in can reserve exactly one retry of the original signed-out analysis", () => {
   const guard = new AnalysisRecovery();
-  const original = interrupted(guard);
+  const original = guard.beginRun("ja");
+  assert.ok(original);
+  guard.finishRun(original, true);
   assert.equal(guard.beginSignIn(original), true);
   assert.equal(guard.beginSignIn(original), false);
   assert.equal(guard.beginRun(), null);
   const retry = guard.retry(original);
   assert.ok(retry);
   assert.equal(retry.retried, true);
+  assert.equal(retry.language, "ja");
   assert.equal(guard.retry(original), null);
   assert.equal(guard.beginRun(), null);
   guard.finishRun(retry, true);

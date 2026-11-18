@@ -35,7 +35,7 @@ test("session size includes every artifact and deletion removes the whole direct
     ];
     for (const [file, data] of artifacts) await writeFile(path.join(dir, file), data);
 
-    const [summary] = await listSessions();
+    const [summary] = await listSessions("ja");
     const expectedBytes = artifacts.reduce(
       (sum, [, data]) => sum + (typeof data === "string" ? Buffer.byteLength(data) : data.byteLength),
       0,
@@ -43,6 +43,7 @@ test("session size includes every artifact and deletion removes the whole direct
     assert.equal(summary?.sizeBytes, expectedBytes);
     assert.equal(summary?.hasAudio, true);
     assert.equal(summary?.narrationLanguage, "en");
+    assert.equal(summary?.defaultAnalysisLanguage, "ja");
 
     await deleteSession(id);
     await assert.rejects(access(dir), { code: "ENOENT" });

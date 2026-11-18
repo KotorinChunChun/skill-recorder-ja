@@ -51,6 +51,8 @@ export interface SessionSummary {
   hasAudio: boolean;
   /** Selected source language for saved audio, or null when no audio exists. */
   narrationLanguage: NarrationLanguage | null;
+  /** Initial language for the generated analysis text. */
+  defaultAnalysisLanguage: NarrationLanguage;
   /** True once transcription completed, including recordings with no detected speech. */
   hasNarration: boolean;
   narrationSegmentCount: number | null;
@@ -609,7 +611,7 @@ export interface SkillRecorderApi {
    *  Runs an on-device sensitive-detail scan first and redacts any flagged values
    *  from the text before it is sent — non-blocking; the analysis always proceeds
    *  and any redaction is reported back in `review`. */
-  analyze(sessionId?: string): Promise<AnalyzeResult>;
+  analyze(sessionId?: string, language?: NarrationLanguage): Promise<AnalyzeResult>;
   /** Send NL feedback and re-analyze in the same multi-turn session. */
   analyzeFeedback(input: AnalysisFeedbackInput): Promise<AnalyzeResult>;
   /** Load the persisted analysis for a session, if any. */

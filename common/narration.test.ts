@@ -6,6 +6,7 @@ import {
   isNarrationLanguage,
   NARRATION_LANGUAGES,
   narrationLanguageLabel,
+  resolveAnalysisLanguage,
   resolveSystemNarrationLanguage,
 } from "./narration";
 
@@ -31,4 +32,10 @@ test("the first supported system language is used for narration", () => {
   assert.equal(resolveSystemNarrationLanguage(["nb-NO"]), "no");
   assert.equal(resolveSystemNarrationLanguage(["zu-ZA"]), "en");
   assert.equal(resolveSystemNarrationLanguage([]), "en");
+});
+
+test("analysis uses a selected language ahead of the recorder fallback", () => {
+  assert.equal(resolveAnalysisLanguage("en", "ja", "fr"), "ja");
+  assert.equal(resolveAnalysisLanguage("ja", undefined, "fr"), "fr");
+  assert.equal(resolveAnalysisLanguage("ja", "system", "not-a-language"), "ja");
 });

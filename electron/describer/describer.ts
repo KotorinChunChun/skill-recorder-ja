@@ -10,13 +10,15 @@ import {
   type AnalysisFeedback,
   type AnalysisSubmission,
 } from "../../common/analysis";
+import { readExplicitAudioNarrationLanguage } from "../../common/audio";
 import { type AnalyzeProgress } from "../../common/ipc";
+import { DEFAULT_NARRATION_LANGUAGE, resolveAnalysisLanguage, type NarrationLanguage } from "../../common/narration";
 import type { SessionMeta } from "../../common/types";
 import { FrameExtractor } from "../frames/extractor";
 import { createLogger } from "../logger";
 import { aiConnection, connectAiClient, createAiSession, providerError, type AiRuntimeConfig } from "../ai-provider";
 import { sessionsRoot, sessionDir, isValidSessionId } from "../recorder/session-store";
-import { DESCRIBER_INSTRUCTIONS, IMPORTED_DESCRIBER_INSTRUCTIONS } from "./instructions";
+import { describerInstructions } from "./instructions";
 import { readImport } from "../imports/metadata";
 import { ImportedFrames } from "../imports/frames";
 import { createDescriberTools, type RedactionContext } from "./tools";
@@ -50,6 +52,7 @@ interface LiveSession {
   sessionId: string;
   sessionDir: string;
   copilot: CopilotSession;
+  language: NarrationLanguage;
   revision: number;
   feedbackLog: Analysis["feedbackLog"];
   /** Mutable capture slot the `submit_analysis` tool writes into. */
@@ -98,10 +101,16 @@ export class Describer {
   constructor(
     private readonly emitProgress: (p: AnalyzeProgress) => void,
     private readonly connection: () => Promise<AiRuntimeConfig> = () => aiConnection.configuration(),
+    private readonly defaultLanguage: () => NarrationLanguage = () => DEFAULT_NARRATION_LANGUAGE,
   ) {}
 
   /** First pass: reconstruct the session from scratch. */
-  async analyze(sessionId: string, redaction?: RedactionContext, signal?: AbortSignal): Promise<Analysis> {
+  async analyze(
+    sessionId: string,
+    redaction?: RedactionContext,
+    signal?: AbortSignal,
+    language?: NarrationLanguage,
+  ): Promise<Analysis> {
     if (this.active.has(sessionId)) throw new Error("An analysis is already running for this session.");
     this.active.add(sessionId);
     const abort = () => { void this.cancel(sessionId); };
@@ -110,7 +119,7 @@ export class Describer {
       signal?.throwIfAborted();
       this.emit(sessionId, "start", "Starting analysis…");
       await this.disposeLive(sessionId); // fresh conversation each explicit analyze
-      const live = await this.createLive(sessionId);
+      const live = await this.createLive(sessionId, language);
       live.signal = signal;
       signal?.throwIfAborted();
       live.redaction.current = redaction ?? null;
@@ -130,9 +139,12 @@ export class Describer {
     this.active.add(sessionId);
     try {
       this.emit(sessionId, "start", "Re-analyzing with your feedback…");
-      const live = this.live.get(sessionId) ?? (await this.createLive(sessionId));
-      live.redaction.current = redaction ?? null;
       const prior = loadPersistedAnalysis(sessionId);
+      if (prior?.language && this.live.get(sessionId)?.language !== prior.language) {
+        await this.disposeLive(sessionId);
+      }
+      const live = this.live.get(sessionId) ?? (await this.createLive(sessionId, prior?.language));
+      live.redaction.current = redaction ?? null;
       // The feedback round is recorded in runTurn only after it produces a
       // revision, so a failed turn never leaves a phantom log entry.
       return await this.runTurn(live, renderFeedbackPrompt(fb, prior), fb);
@@ -246,13 +258,20 @@ export class Describer {
     }
   }
 
-  private async createLive(sessionId: string): Promise<LiveSession> {
+  private async createLive(sessionId: string, requestedLanguage?: NarrationLanguage): Promise<LiveSession> {
     const dir = sessionDir(sessionId);
     const meta = readJson<SessionMeta>(path.join(dir, "session.json"));
     if (!meta) throw new Error(`Session ${sessionId} not found or has no session.json.`);
 
     const imported = meta.source === "imported-video" ? readImport(dir) : null;
     if (meta.source === "imported-video" && !imported) throw new Error("Imported recording metadata is missing.");
+    const language = resolveAnalysisLanguage(
+      this.defaultLanguage(),
+      requestedLanguage,
+      imported?.language,
+      meta.narrationLanguage,
+      readExplicitAudioNarrationLanguage(readJson<unknown>(path.join(dir, "audio.json"))),
+    );
     const importedFrames = imported ? new ImportedFrames(dir, imported, meta.startedAt) : undefined;
     const extractor = importedFrames ?? buildExtractor(dir);
     const holder: LiveSession["holder"] = { submission: undefined };
@@ -273,7 +292,7 @@ export class Describer {
 
     const client = await this.ensureClient();
     const config = {
-      systemMessage: { mode: "append" as const, content: imported ? IMPORTED_DESCRIBER_INSTRUCTIONS : DESCRIBER_INSTRUCTIONS },
+      systemMessage: { mode: "append" as const, content: describerInstructions(language, Boolean(imported)) },
       tools,
       onPermissionRequest: approveAll,
       workingDirectory: dir,
@@ -295,6 +314,7 @@ export class Describer {
       sessionId,
       sessionDir: dir,
       copilot,
+      language,
       revision: prior?.revision ?? 0,
       feedbackLog: prior?.feedbackLog ?? [],
       holder,
@@ -373,6 +393,7 @@ export class Describer {
       submission,
       [...live.feedbackLog],
       narrationSourceUpdatedAt,
+      live.language,
     );
     this.persist(live.sessionDir, analysis, Boolean(live.importedFrames));
     this.emit(live.sessionId, "done", `Analysis ready (revision ${analysis.revision}).`);

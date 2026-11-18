@@ -145,6 +145,14 @@ export function narrationLanguageLabel(language: NarrationLanguage): string {
   return match.label;
 }
 
+/** Pick the first valid saved preference, then fall back to the active recorder setting. */
+export function resolveAnalysisLanguage(
+  fallback: NarrationLanguage,
+  ...selectedLanguages: unknown[]
+): NarrationLanguage {
+  return selectedLanguages.find(isNarrationLanguage) ?? fallback;
+}
+
 /**
  * The offline voice-narration transcript. This is the spoken form of the typed
  * marker: the user's own stated intent while recording. It is produced after

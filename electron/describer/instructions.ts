@@ -1,3 +1,5 @@
+import { narrationLanguageLabel, type NarrationLanguage } from "../../common/narration";
+
 /**
  * The describer **brief** — the agent's system message (appended to the SDK
  * foundation). It tells the Copilot CLI agent its job, the tools it has, the
@@ -147,8 +149,8 @@ narrating the task they are doing ("I'm gathering quotes on habits"), that task 
 usual — do not turn ordinary research into a hypothetical automation.
 
 ## Output schema (submit_analysis)
-- **title**: a SHORT 2–5 word label for the task, in Title Case with no trailing period,
-  under ~40 characters, e.g. "Research Habit Articles", "Extract Invoice Data", "Compare
+- **title**: a SHORT label for the task with no trailing period, under ~40 characters.
+  In English use 2–5 words in Title Case, e.g. "Research Habit Articles", "Extract Invoice Data", "Compare
   Pricing Plans". This is the session's name in lists, so make it scannable — name the
   task, not the apps used. It must be a **fresh short name, NOT the intent sentence
   truncated**. (e.g. intent "Copy the last few messages of a Teams chat into a new Apple
@@ -165,11 +167,11 @@ usual — do not turn ordinary research into a hypothetical automation.
 - **steps[]**: ordered; each is:
   - **id**: stable short id you assign, "s1", "s2", …
   - **title**: a short label naming what the user did, in the **past tense and addressed to the
-    user** — start with a past-tense verb, e.g. "Searched Google for 'atomic habits'" or "Opened
+    user** — e.g. in English, start with a past-tense verb: "Searched Google for 'atomic habits'" or "Opened
     the Teams event link". Not imperative ("Search…", "Open…") or third person ("User searched…").
   - **detail**: 1–3 sentences of what happened and why it matters, written in the **past tense
-    and addressed to the user** — a narration of their own actions. Start with a past-tense verb
-    and omit the subject, e.g. "Opened the Copilot Studio technical guide in Edge." or "Copied a
+    and addressed to the user** — a narration of their own actions. In English, start with a past-tense
+    verb and omit the subject, e.g. "Opened the Copilot Studio technical guide in Edge." or "Copied a
     passage from the article and pasted it into Google." Do NOT use the third person ("The user…",
     "User was…") or the present/continuous tense.
   - **startMs / endMs**: the step's \`atMs\` span when known.
@@ -226,3 +228,16 @@ Keep the user-facing result in the usual past-tense style, with short step title
 
 ${DESCRIBER_INSTRUCTIONS.slice(DESCRIBER_INSTRUCTIONS.indexOf("## Output schema"))}
 `.trim();
+
+export function describerInstructions(language: NarrationLanguage, imported: boolean): string {
+  const base = imported ? IMPORTED_DESCRIBER_INSTRUCTIONS : DESCRIBER_INSTRUCTIONS;
+  return [
+    base,
+    "## Analysis language",
+    `Write the generated text in ${narrationLanguageLabel(language)} (${language}), including the session title, ` +
+      "intent, intentRationale, steps[].title, steps[].detail, and any explanatory prose in evidence.",
+    "Use this language even when the recording, transcript, or feedback uses a different language. " +
+      "Use its natural word order, capitalization and punctuation. The examples illustrate the format.",
+    "Preserve product names, exact quotes, commands, filenames, URLs, and schema field names, IDs and enum values.",
+  ].join("\n\n");
+}

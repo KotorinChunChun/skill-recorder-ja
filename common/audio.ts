@@ -88,6 +88,12 @@ export function readAudioNarrationLanguage(value: unknown): NarrationLanguage {
   return value.narrationLanguage;
 }
 
+export function readExplicitAudioNarrationLanguage(value: unknown): NarrationLanguage | undefined {
+  if (isAudioManifestV2(value) && isNarrationLanguage(value.narrationLanguage)) {
+    return value.narrationLanguage;
+  }
+}
+
 /** Add video-relative offsets without altering the session-relative timeline. */
 export function alignAudioSegmentsToVideo(
   segments: readonly AudioSegment[],

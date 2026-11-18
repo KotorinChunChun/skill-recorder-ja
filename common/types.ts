@@ -1,3 +1,5 @@
+import type { NarrationLanguage } from "./narration";
+
 export type RecorderState = "idle" | "recording";
 
 export interface SessionMeta {
@@ -6,6 +8,8 @@ export interface SessionMeta {
   stoppedAt: number | null;
   platform: NodeJS.Platform;
   appVersion: string;
+  /** Language selected when the recording started, including recordings without audio. */
+  narrationLanguage?: NarrationLanguage;
   /** Absent in recordings made before local video import was introduced. */
   source?: "imported-video";
 }

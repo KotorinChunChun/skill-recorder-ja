@@ -616,6 +616,8 @@ function AnalysisWorkspace({
   const [draftTitle, setDraftTitle] = useState("");
   const [draftIntent, setDraftIntent] = useState("");
   const [confirmReanalysis, setConfirmReanalysis] = useState(false);
+  const [selectedOutputLanguage, setSelectedOutputLanguage] = useState<NarrationLanguage | null>(null);
+  const outputLanguage = selectedOutputLanguage ?? analysis?.language ?? summary.defaultAnalysisLanguage;
   // Directly-editable steps (the source of truth downstream); persisted on a short
   // debounce so typing stays instant. `stepsDirty` gates the persist so seeding from
   // a freshly loaded analysis never writes back.
@@ -717,14 +719,14 @@ function AnalysisWorkspace({
       setStatusLine("開始中…");
       let signedOut = false;
       try {
-        if (imported) {
+        if (imported && !analysis) {
           const saved = await window.skillRecorder.saveImportDetails(sessionId, {
             details: importDetails, language: importLanguage,
           });
           if (!saved.ok) throw new Error(saved.error ?? "録画の詳細を保存できませんでした。");
           if (!workspaceLive.current || !recovery.current.accepts(token)) return;
         }
-        const res = await window.skillRecorder.analyze(sessionId);
+        const res = await window.skillRecorder.analyze(sessionId, token.language);
         if (!workspaceLive.current || !recovery.current.accepts(token)) return;
         if (res.ok && res.analysis) {
           setAnalysis(res.analysis);
@@ -762,12 +764,12 @@ function AnalysisWorkspace({
         }
       }
     },
-    [sessionId, onChanged, imported, importDetails, importLanguage],
+    [sessionId, onChanged, imported, importDetails, importLanguage, analysis],
   );
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (language?: NarrationLanguage) => {
     if (signInPendingRef.current) return;
-    const token = recovery.current.beginRun();
+    const token = recovery.current.beginRun(language);
     if (!token) return;
     try {
       if (await ensureAiReady(true) && workspaceLive.current && recovery.current.accepts(token)) {
@@ -893,7 +895,12 @@ function AnalysisWorkspace({
           <span className="eyebrow">解析</span>
           <span className="ws-when">{formatWhen(summary.startedAt)}</span>
         </div>
-        <DebugDownload sessionId={sessionId} />
+        <div className="ws-head-actions">
+          {analysis && readyToAnalyze && !voiceStale && !confirmReanalysis && !analyzing && !signInPending && !editing && (
+            <button className="ghost" onClick={() => setConfirmReanalysis(true)}>再解析</button>
+          )}
+          <DebugDownload sessionId={sessionId} />
+        </div>
       </div>
 
       <div className="ws-body">
@@ -903,22 +910,34 @@ function AnalysisWorkspace({
           </p>
         )}
 
-        {voiceStale && !analyzing && !signInPending && (
+        {analysis && readyToAnalyze && (voiceStale || confirmReanalysis) && !analyzing && !signInPending && !editing && (
           <div className="voice-card">
             <div className="voice-card-copy">
-              <strong>解析後に文字起こしが追加されました</strong>
-              <span>文字起こしを含めるには再解析してください。現在の要約と編集内容は置き換わります。</span>
+              {voiceStale && <strong>解析後に文字起こしが追加されました</strong>}
+              {confirmReanalysis ? (
+                <>
+                  <AnalysisLanguageSelect
+                    label="生成する文章の言語"
+                    value={outputLanguage}
+                    onChange={setSelectedOutputLanguage}
+                  />
+                  <span>録画データを AI に送り、現在の解析結果を置き換えます。手動で編集した内容も置き換わります。</span>
+                </>
+              ) : (
+                <span>文字起こしを含めるには再解析してください。</span>
+              )}
             </div>
             {confirmReanalysis ? (
               <div className="voice-card-actions">
-                <button className="linky" onClick={() => setConfirmReanalysis(false)}>
+                <button className="linky" onClick={() => { setConfirmReanalysis(false); setSelectedOutputLanguage(null); }}>
                   キャンセル
                 </button>
                 <button
                   className="secondary"
                   onClick={() => {
                     setConfirmReanalysis(false);
-                    void run();
+                    setSelectedOutputLanguage(null);
+                    void run(outputLanguage);
                   }}
                 >
                   解析結果を置き換える
@@ -936,10 +955,10 @@ function AnalysisWorkspace({
           <p className="ws-note">この録画を処理中です。少し待ってからもう一度お試しください。</p>
         )}
 
-        {readyToAnalyze && !analysis && !analyzing && (
+        {readyToAnalyze && !summary.analysis && !analysis && !analyzing && (
           <div className="ws-empty">
             <p className="ws-empty-lead">{imported ? "録画から操作手順を作成します。" : "録画から実際の操作手順を確認できます。"}</p>
-            {imported && (
+            {imported ? (
               <div className="import-details">
                 <p className="import-source">{imported.name} · {formatDur(imported.durationMs)} · {imported.hasAudio ? "動画と音声" : "音声なしの動画"}</p>
                 <label className="edit-field">
@@ -954,19 +973,22 @@ function AnalysisWorkspace({
                   />
                 </label>
                 <small>作業の目的や映っている内容、目安の時刻を書けます。時刻は AI の参考情報です。動画の切り出しは行われず、指定外の部分も処理される場合があります。</small>
-                {imported.hasAudio && (
-                  <label className="edit-field">
-                    <span className="edit-label">録画の音声言語</span>
-                    <select className="edit-title" value={importLanguage} disabled={signInPending} onChange={(event) => {
-                      if (isNarrationLanguage(event.target.value)) setImportLanguage(event.target.value);
-                    }}>
-                      {NARRATION_LANGUAGES.map(({ code }) => <option key={code} value={code}>{japaneseNarrationLanguage(code)}</option>)}
-                    </select>
-                  </label>
-                )}
+                <AnalysisLanguageSelect
+                  label={imported.hasAudio ? "録画の音声と生成する文章の言語" : "生成する文章の言語"}
+                  value={importLanguage}
+                  onChange={setImportLanguage}
+                  disabled={signInPending}
+                />
               </div>
+            ) : (
+              <AnalysisLanguageSelect
+                label="生成する文章の言語"
+                value={outputLanguage}
+                onChange={setSelectedOutputLanguage}
+                disabled={signInPending}
+              />
             )}
-            <button className="record-cta" onClick={() => void run()} disabled={signInPending}>
+            <button className="record-cta" onClick={() => void run(imported ? importLanguage : outputLanguage)} disabled={signInPending}>
               録画を解析
             </button>
             <details className="analyze-disclosure">
@@ -1127,6 +1149,26 @@ function AnalysisWorkspace({
         </div>
       )}
     </section>
+  );
+}
+
+function AnalysisLanguageSelect({
+  label, value, onChange, disabled,
+}: {
+  label: string;
+  value: NarrationLanguage;
+  onChange: (language: NarrationLanguage) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="edit-field">
+      <span className="edit-label">{label}</span>
+      <select className="edit-title" value={value} disabled={disabled} onChange={(event) => {
+        if (isNarrationLanguage(event.target.value)) onChange(event.target.value);
+      }}>
+        {NARRATION_LANGUAGES.map(({ code }) => <option key={code} value={code}>{japaneseNarrationLanguage(code)}</option>)}
+      </select>
+    </label>
   );
 }
 

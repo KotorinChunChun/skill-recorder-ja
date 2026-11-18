@@ -2,10 +2,12 @@ import { access, lstat, readdir, readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { AnalysisSchema, type Analysis } from "../common/analysis";
-import { readAudioNarrationLanguage } from "../common/audio";
+import { readAudioNarrationLanguage, readExplicitAudioNarrationLanguage } from "../common/audio";
 import type { SessionSummary } from "../common/ipc";
 import {
   NARRATION_FILE,
+  DEFAULT_NARRATION_LANGUAGE,
+  resolveAnalysisLanguage,
   type NarrationLanguage,
   type NarrationTranscript,
 } from "../common/narration";
@@ -52,10 +54,13 @@ async function loadNarration(
   }
 }
 
-async function loadAudioLanguage(dir: string): Promise<NarrationLanguage | null> {
+async function loadAudioLanguage(dir: string) {
   try {
     const raw = JSON.parse(await readFile(path.join(dir, "audio.json"), "utf8")) as unknown;
-    return readAudioNarrationLanguage(raw);
+    return {
+      language: readAudioNarrationLanguage(raw),
+      explicitLanguage: readExplicitAudioNarrationLanguage(raw),
+    };
   } catch {
     return null;
   }
@@ -113,7 +118,7 @@ export async function sessionDirectorySize(root: string): Promise<number> {
 }
 
 /** Build the library summary for a single session dir, or null if it isn't one. */
-async function summarize(root: string, name: string): Promise<SessionSummary | null> {
+async function summarize(root: string, name: string, fallbackLanguage: NarrationLanguage): Promise<SessionSummary | null> {
   const dir = path.join(root, name);
   try {
     if (!(await stat(dir)).isDirectory()) return null;
@@ -143,7 +148,7 @@ async function summarize(root: string, name: string): Promise<SessionSummary | n
     analysis,
     processed,
     hasVideo,
-    narrationLanguage,
+    audioLanguage,
     narration,
     hasSkill,
     hasAutomation,
@@ -174,8 +179,11 @@ async function summarize(root: string, name: string): Promise<SessionSummary | n
     sizeBytes,
     processed,
     hasVideo,
-    hasAudio: narrationLanguage !== null,
-    narrationLanguage,
+    hasAudio: audioLanguage !== null,
+    narrationLanguage: audioLanguage?.language ?? null,
+    defaultAnalysisLanguage: resolveAnalysisLanguage(
+      fallbackLanguage, imported?.language, meta.narrationLanguage, audioLanguage?.explicitLanguage,
+    ),
     hasNarration: narration !== null,
     narrationSegmentCount: narration?.segmentCount ?? null,
     narrationUpdatedAt: narration?.updatedAt ?? null,
@@ -196,7 +204,7 @@ async function summarize(root: string, name: string): Promise<SessionSummary | n
 }
 
 /** Enumerate saved recordings for the sessions library, newest first. */
-export async function listSessions(): Promise<SessionSummary[]> {
+export async function listSessions(fallbackLanguage = DEFAULT_NARRATION_LANGUAGE): Promise<SessionSummary[]> {
   const root = sessionsRoot();
   let names: string[];
   try {
@@ -206,7 +214,7 @@ export async function listSessions(): Promise<SessionSummary[]> {
   }
 
   const summaries = await Promise.all(
-    names.filter((name) => isValidSessionId(name)).map((name) => summarize(root, name)),
+    names.filter((name) => isValidSessionId(name)).map((name) => summarize(root, name, fallbackLanguage)),
   );
   const out = summaries.filter((s): s is SessionSummary => s !== null);
   out.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isNarrationLanguage, type NarrationLanguage } from "./narration";
 
 /**
  * The structured result of the Copilot describer: a high-level **intent** plus an
@@ -72,6 +73,8 @@ export const AnalysisSchema = z.object({
   /** Bumped on every (re)analysis; revision 1 is the first pass. */
   revision: z.number().int(),
   createdAt: z.number(),
+  /** Requested language of the generated text. Older analyses do not have one. */
+  language: z.custom<NarrationLanguage>(isNarrationLanguage).optional(),
   /** Narration file version available when this analysis turn started. */
   narrationSourceUpdatedAt: z.number().nullable().default(null),
   /** Short 2–5 word label for lists/menus. Empty on analyses saved before titles existed. */
@@ -104,6 +107,7 @@ export function toAnalysis(
   submission: AnalysisSubmission,
   feedbackLog: FeedbackEntry[],
   narrationSourceUpdatedAt: number | null,
+  language?: NarrationLanguage,
 ): Analysis {
   return AnalysisSchema.parse({
     version: 1,
@@ -111,6 +115,7 @@ export function toAnalysis(
     revision,
     createdAt: Date.now(),
     narrationSourceUpdatedAt,
+    ...(language ? { language } : {}),
     title: submission.title,
     intent: submission.intent,
     intentConfidence: submission.intentConfidence,

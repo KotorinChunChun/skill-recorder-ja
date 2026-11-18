@@ -93,7 +93,7 @@ let recordingStartPending = false;
 let pendingLibrarySelection: string | null = null;
 let defaultNarrationLanguage = DEFAULT_NARRATION_LANGUAGE;
 const narrationPreferenceFile = path.join(profile, "narration-language.json");
-const imports = new ImportManager(() => defaultNarrationLanguage);
+const imports = new ImportManager(() => recorder.status().narrationLanguage);
 const recordingPrivacy = new RecordingPrivacySession();
 const narration = new NarrationManager((status) =>
   broadcast(IPC.narrationStatusChanged, status),
@@ -177,7 +177,11 @@ function broadcast(channel: string, payload: unknown): void {
   }
 }
 
-const describer = new Describer((progress) => broadcast(IPC.analyzeProgress, progress));
+const describer = new Describer(
+  (progress) => broadcast(IPC.analyzeProgress, progress),
+  undefined,
+  () => recorder.status().narrationLanguage,
+);
 const builder = new SkillBuilder((progress) => broadcast(IPC.skillProgress, progress));
 const automationBuilder = new AutomationBuilder((progress) =>
   broadcast(IPC.automationProgress, progress),
